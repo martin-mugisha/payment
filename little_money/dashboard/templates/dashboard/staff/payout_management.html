@@ -1,0 +1,38 @@
+<!-- prettier-ignore -->
+{% extends "dashboard/staff/base_staff.html" %}
+{% block title %}Payout Management{% endblock %}
+
+{% block content %}
+<h2>Payout Management</h2>
+
+<table class="styled-table">
+  <thead>
+    <tr>
+      <th>Merchant</th>
+      <th>Amount</th>
+      <th>Status</th>
+      <th>Requested On</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for payout in payouts %}
+    <tr>
+      <td>{{ payout.merchant.name }}</td>
+      <td>{{ payout.amount }}</td>
+      <td>{{ payout.status }}</td>
+      <td>{{ payout.requested_on|date:"Y-m-d H:i" }}</td>
+      <td>
+        {% if payout.status == "Pending" %}
+        <a href="{% url 'approve_payout' payout.id %}">Approve</a>
+        {% else %} - {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="5">No payout requests found.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

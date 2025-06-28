@@ -37,6 +37,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path('', dashboard_views.index, name='index'),
     path('admin/', admin.site.urls),
     path('api/initiate/', initiate_transaction),
     path('api/history/', TransactionHistoryView.as_view()),
@@ -51,6 +52,30 @@ urlpatterns = [
     path('logout/', dashboard_views.user_logout, name='logout'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('dashboard/staff-users/', dashboard_views.staff_users, name='staff_users'),
+    path('dashboard/profile/', dashboard_views.profile_view, name='profile'),
+
+    # Added missing views
+    path('dashboard/admin/payouts-overview/', dashboard_views.payouts_overview, name='payouts_overview'),
+    path('dashboard/admin/kyc-status/', dashboard_views.kyc_status, name='kyc_status'),
+    path('dashboard/admin/chargebacks/', dashboard_views.chargebacks, name='chargebacks'),
+    path('dashboard/admin/risk-alerts/', dashboard_views.risk_alerts, name='risk_alerts'),
+    path('dashboard/admin/profile-admin/', dashboard_views.profile_admin, name='profile_admin'),
+    path('dashboard/admin/staff-user/', dashboard_views.staff_user, name='staff_user'),
+
+    path('dashboard/staff/merchant-list/', dashboard_views.merchant_list, name='merchant_list'),
+    path('dashboard/staff/profile-staff/', dashboard_views.profile_staff, name='profile_staff'),
+    path('dashboard/staff/earnings/', dashboard_views.earnings, name='earnings'),
+    path('dashboard/staff/dispute-management/', dashboard_views.dispute_management, name='dispute_management'),
+    path('dashboard/staff/refund-processing/', dashboard_views.refund_processing, name='refund_processing'),
+    path('dashboard/staff/failed-transactions/', dashboard_views.failed_transactions, name='failed_transactions'),
+    path('dashboard/staff/support-tickets/', dashboard_views.support_tickets, name='support_tickets'),
+    path('dashboard/staff/suspicious-activity/', dashboard_views.suspicious_activity, name='suspicious_activity'),
+    path('dashboard/staff/audit-logs/', dashboard_views.audit_logs, name='audit_logs'),
+    path('dashboard/staff/base-staff/', dashboard_views.base_staff, name='base_staff'),
+    path('dashboard/staff/staff/', dashboard_views.staff, name='staff'),
+    path('dashboard/staff/payout-management/', dashboard_views.payout_management, name='payout_management'),
 ]
+
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

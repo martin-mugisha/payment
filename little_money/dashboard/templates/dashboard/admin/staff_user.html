@@ -1,0 +1,43 @@
+<!-- prettier-ignore -->
+{% extends "dashboard/admin/base_admin.html" %} 
+{% block title %}
+Staff Users 
+{% endblock %} 
+{% block content %}
+<h3>Staff Users</h3>
+
+{% if messages %} {% for message in messages %}
+<p class="message-success">{{ message }}</p>
+{% endfor %} {% endif %}
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Date Joined</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in staff_users %}
+    <tr>
+      <td>{{ user.username }}</td>
+      <td>{{ user.date_joined }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<hr />
+<h3>Add New Staff User</h3>
+<form method="post" class="add-staff-form">
+  {% csrf_token %}
+  <label>
+    Username: <input type="text" name="username" required class="input-text" />
+  </label>
+  <label>
+    Password:
+    <input type="password" name="password" required class="input-text" />
+  </label>
+  <button type="submit" class="btn-primary">Create Staff User</button>
+</form>
+{% endblock %}

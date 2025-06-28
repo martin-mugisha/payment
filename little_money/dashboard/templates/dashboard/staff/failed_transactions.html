@@ -1,0 +1,33 @@
+<!-- prettier-ignore -->
+{% extends "dashboard/staff/base_staff.html" %} {% block title %}Failed
+Transactions{% endblock %} 
+{% block content %}
+<h2>Failed Transactions</h2>
+
+<table class="styled-table">
+  <thead>
+    <tr>
+      <th>Transaction ID</th>
+      <th>Merchant</th>
+      <th>Amount</th>
+      <th>Failure Reason</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for txn in failed_transactions %}
+    <tr>
+      <td>{{ txn.transaction_id }}</td>
+      <td>{{ txn.merchant.name }}</td>
+      <td>{{ txn.amount }}</td>
+      <td>{{ txn.failure_reason }}</td>
+      <td>{{ txn.date }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="5">No failed transactions found.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

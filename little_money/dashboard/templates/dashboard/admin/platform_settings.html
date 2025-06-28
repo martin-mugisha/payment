@@ -1,0 +1,23 @@
+<!-- prettier-ignore -->
+{% extends "dashboard/admin/base_admin.html" %} 
+{% block title %}Platform Fee Settings{% endblock %} 
+{% block content %}
+<h3>Platform Fee Settings</h3>
+{% if messages %} {% for message in messages %}
+<p class="message-success">{{ message }}</p>
+{% endfor %} {% endif %}
+<form method="post" class="settings-form">
+  {% csrf_token %}
+  <label>
+    Current Platform Fee (%):
+    <input
+      type="number"
+      step="0.01"
+      name="platform_fee_percent"
+      value="{{ settings.platform_fee_percent }}"
+      class="input-number"
+    />
+  </label>
+  <button type="submit" class="btn-primary">Update Fee</button>
+</form>
+{% endblock %}
