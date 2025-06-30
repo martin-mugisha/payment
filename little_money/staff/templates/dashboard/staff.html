@@ -1,0 +1,32 @@
+<!-- prettier-ignore -->
+{% extends "dashboard/base_staff.html" %}
+{% block title %}My Transactions{% endblock %}
+
+{% block content %}
+<h2>My Transactions</h2>
+
+<table class="styled-table">
+  <thead>
+    <tr>
+      <th>Transaction ID</th>
+      <th>Amount</th>
+      <th>Status</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for txn in transactions %}
+    <tr>
+      <td>{{ txn.transaction_id }}</td>
+      <td>{{ txn.amount }}</td>
+      <td>{{ txn.status }}</td>
+      <td>{{ txn.date|date:"Y-m-d H:i" }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="4">No transactions found.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

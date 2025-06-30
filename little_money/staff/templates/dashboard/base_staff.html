@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Staff Dashboard - {{ page_title }}</title>
+    <link rel="stylesheet" href="{% static 'css/staff.css' %}" />
+  </head>
+  <body class="light-mode">
+    <div class="dashboard-wrapper">
+      <div id="sidebar-overlay"></div>
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <button id="close-sidebar-btn">&times;</button>
+          <h2>Staff</h2>
+        </div>
+        <nav>
+          <a href="{% url 'staff:staff_dashboard' %}"
+            ><i class="fas fa-receipt"></i> My Transactions</a
+          >
+          <a href="{% url 'staff:merchant_list' %}"
+            ><i class="fas fa-users"></i> Merchants</a
+          >
+          <a href="{% url 'staff:payout_management' %}"
+            ><i class="fas fa-money-check-alt"></i> Payout Management</a
+          >
+          <a href="{% url 'staff:dispute_management' %}"
+            ><i class="fas fa-exclamation-triangle"></i> Disputes &
+            Chargebacks</a
+          >
+          <a href="{% url 'staff:refund_processing' %}"
+            ><i class="fas fa-undo-alt"></i> Refunds</a
+          >
+          <a href="{% url 'staff:earnings' %}"
+            ><i class="fas fa-receipt"></i> Earnings</a
+          >
+          <a href="{% url 'staff:failed_transactions' %}"
+            ><i class="fas fa-times-circle"></i> Failed Transactions</a
+          >
+          <a href="{% url 'staff:support_tickets' %}"
+            ><i class="fas fa-ticket-alt"></i> Support Tickets</a
+          >
+          <a href="{% url 'staff:suspicious_activity' %}"
+            ><i class="fas fa-shield-alt"></i> Suspicious Alerts</a
+          >
+          <a href="{% url 'staff:audit_logs' %}"
+            ><i class="fas fa-clipboard-list"></i> Audit Log</a
+          >
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- Header -->
+        <button
+          id="hamburger-btn"
+          class="hamburger-btn"
+          aria-label="Toggle sidebar"
+        >
+          &#9776;
+        </button>
+        <header class="dashboard-header">
+          <h1 class="page-title">{% block title %}{% endblock %}</h1>
+          <div class="header-right">
+            <div class="toggle-theme">
+              <i class="fas fa-sun"></i>
+              <input type="checkbox" id="theme-toggle" />
+              <i class="fas fa-moon"></i>
+            </div>
+
+            <div class="avatar-dropdown">
+              <img
+                src="{% static 'dashboard/img/avatar.png' %}"
+                alt="User Avatar"
+                class="avatar-img"
+              />
+              <div class="dropdown-menu">
+                <a href="{% url 'staff:profile_staff' %}">Profile</a>
+                <a href="#">Messages</a>
+                <a href="#">Settings</a>
+                <a href="{% url 'authenticate:logout' %}">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Page Content -->
+        <main>{% block content %}{% endblock %}</main>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'js/staff.js' %}" defer></script>
+  </body>
+</html>

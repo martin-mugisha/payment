@@ -1,0 +1,40 @@
+<!-- prettier-ignore -->
+{% extends "dashboard/base_staff.html" %}
+{% block title %}Refund Processing{% endblock %}
+
+{% block content %}
+<h2>Refund Processing</h2>
+
+<table class="styled-table">
+  <thead>
+    <tr>
+      <th>Transaction ID</th>
+      <th>Merchant</th>
+      <th>Amount</th>
+      <th>Status</th>
+      <th>Requested On</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for refund in refunds %}
+    <tr>
+      <td>{{ refund.transaction_id }}</td>
+      <td>{{ refund.merchant.name }}</td>
+      <td>{{ refund.amount }}</td>
+      <td>{{ refund.status }}</td>
+      <td>{{ refund.requested_on|date:"Y-m-d H:i" }}</td>
+      <td>
+        {% if refund.status == "Pending" %}
+        <a href="{% url 'process_refund' refund.id %}">Process</a>
+        {% else %} - {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6">No refund requests found.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "dashboard/base_staff.html" %} {% block title %}Earnings
+Overview{% endblock %} {% block content %}
+<h2>Recent Earnings</h2>
+
+<!-- Earnings Summary Table -->
+<table class="styled-table">
+  <thead>
+    <tr>
+      <th>Period</th>
+      <th>Earnings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Daily</td>
+      <td>
+        <ul>
+          {% for entry in daily_earnings %}
+          <li>{{ entry.day|date:"Y-m-d" }}: {{ entry.total_earnings }}</li>
+          {% empty %}
+          <li>No data</li>
+          {% endfor %}
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>Weekly</td>
+      <td>
+        <ul>
+          {% for entry in weekly_earnings %}
+          <li>{{ entry.week|date:"Y-m-d" }}: {{ entry.total_earnings }}</li>
+          {% empty %}
+          <li>No data</li>
+          {% endfor %}
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>Monthly</td>
+      <td>
+        <ul>
+          {% for entry in monthly_earnings %}
+          <li>{{ entry.month|date:"Y-m" }}: {{ entry.total_earnings }}</li>
+          {% empty %}
+          <li>No data</li>
+          {% endfor %}
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Total</strong></td>
+      <td><strong>{{ total_staff_earnings }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Withdrawal History -->
+<h3>Withdrawal History</h3>
+<table class="styled-table">
+  <thead>
+    <tr>
+      <th>Amount</th>
+      <th>Requested On</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for withdrawal in withdrawals %}
+    <tr>
+      <td>{{ withdrawal.amount }}</td>
+      <td>{{ withdrawal.requested_on|date:"Y-m-d H:i" }}</td>
+      <td>{{ withdrawal.status }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="3">No withdrawal history available.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

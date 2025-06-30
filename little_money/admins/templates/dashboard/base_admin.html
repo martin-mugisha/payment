@@ -1,0 +1,87 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Dashboard - {{ page_title }}</title>
+    <link rel="stylesheet" href="{% static 'css/admin.css' %}" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+  </head>
+  <body class="light-mode">
+    <div class="dashboard-wrapper">
+      <div id="sidebar-overlay"></div>
+
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <button id="close-sidebar-btn">&times;</button>
+          <h2>Admin</h2>
+        </div>
+        <nav>
+          <a href="{% url 'admins:admin_dashboard' %}"
+            ><i class="fas fa-receipt"></i> Transactions</a
+          >
+          <a href="{% url 'admins:platform_settings' %}"
+            ><i class="fas fa-cogs"></i> Platform Settings</a
+          >
+          <a href="{% url 'admins:staff_users' %}"
+            ><i class="fas fa-users"></i> Staff Users</a
+          >
+          <a href="{% url 'admins:export_csv' %}"
+            ><i class="fas fa-download"></i> Export CSV</a
+          >
+          <a href="{% url 'admins:payouts_overview' %}"
+            ><i class="fas fa-wallet"></i> Payouts</a
+          >
+          <a href="{% url 'admins:kyc_status' %}"
+            ><i class="fas fa-id-card"></i> KYC / Compliance</a
+          >
+          <a href="{% url 'admins:chargebacks' %}"
+            ><i class="fas fa-exclamation-triangle"></i> Chargebacks</a
+          >
+          <a href="{% url 'admins:risk_alerts' %}"
+            ><i class="fas fa-shield-alt"></i> Risk Alerts</a
+          >
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <button
+          id="hamburger-btn"
+          class="hamburger-btn"
+          aria-label="Toggle sidebar"
+        >
+          &#9776;
+        </button>
+        <header>
+          <h1>{% block title %}{% endblock %}</h1>
+          <div class="header-right">
+            <div class="toggle-theme">
+              <i class="fas fa-sun"></i>
+              <input type="checkbox" id="theme-toggle" />
+              <i class="fas fa-moon"></i>
+            </div>
+            <div class="avatar-dropdown">
+              <img
+                src="{% static 'dashboard/img/avatar.png' %}"
+                alt="User Avatar"
+              />
+              <div class="dropdown-menu">
+                <a href="{% url 'admins:profile' %}">Profile</a>
+                <a href="#">Messages</a>
+                <a href="#">Settings</a>
+                <a href="{% url 'authenticate:logout' %}">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main>{% block content %}{% endblock %}</main>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'js/admin.js' %}"></script>
+  </body>
+</html>
