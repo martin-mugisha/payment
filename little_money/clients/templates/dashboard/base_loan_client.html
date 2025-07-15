@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/clients.css' %}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body class="light-mode">
+    <div class="dashboard-wrapper">
+      <div id="sidebar-overlay"></div>
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <button id="close-sidebar-btn">&times;</button>
+          <h2>Client Dashboard</h2>
+        </div>
+        <nav>
+          <a href="{% url 'client:overview_dashboard' %}"><i class="fas fa-tachometer-alt"></i> Overview</a>
+          <a href="{% url 'client:payments' %}"><i class="fas fa-hand-holding-usd"></i> Payments</a>
+          <a href="{% url 'client:transactions' %}"><i class="fas fa-file-invoice-dollar"></i> Transactions</a>
+          <a href="{% url 'client:accounts' %}"><i class="fas fa-university"></i> Accounts</a>
+          <a href="{% url 'client:settings' %}"><i class="fas fa-cog"></i> Settings</a>
+          <a href="{% url 'client:help_support' %}"><i class="fas fa-question-circle"></i> Help / Support</a>
+          <a href="{% url 'authenticate:logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <header>
+          <button
+            id="hamburger-btn"
+            class="hamburger-btn"
+            aria-label="Toggle sidebar"
+          >
+            &#9776;
+          </button>
+          <div class="header-right">
+            <div class="toggle-theme">
+              <i class="fas fa-sun"></i>
+              <input type="checkbox" id="theme-toggle" />
+              <i class="fas fa-moon"></i>
+            </div>
+            <div class="avatar-dropdown">
+              <img
+                src="{% static 'dashboard/img/avatar.png' %}"
+                alt="User Avatar"
+                class="avatar-img"
+              />
+              <div class="dropdown-menu">
+                <a href="#">Profile</a>
+                <a href="#">Settings</a>
+                <a href="{% url 'authenticate:logout' %}">Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Page Content -->
+        <main>{% block content %}{% endblock %}</main>
+      </div>
+    </div>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="{% static 'js/admin.js' %}"></script>
+  </body>
+</html>

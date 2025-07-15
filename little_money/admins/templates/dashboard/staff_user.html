@@ -1,51 +1,200 @@
-<!-- prettier-ignore -->
 {% extends "dashboard/base_admin.html" %} 
 {% block title %}
-Staff Users 
+Users 
 {% endblock %} 
 {% block content %}
-<h3>Staff Users</h3>
+<h3>Users</h3>
 
 {% if messages %} {% for message in messages %}
 <p class="message-success">{{ message }}</p>
 {% endfor %} {% endif %}
 
-<table class="data-table">
-  <thead>
-    <tr>
-      <th>Username</th>
-      <th>Date Joined</th>
-      <th>Action</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for user in staff_users %}
-    <tr>
-      <td>{{ user.username }}</td>
-      <td>{{ user.date_joined }}</td>
-      <td>
-        <form method="post" action="{% url 'admins:delete_staff_user' user.id %}" class="delete-form">
-          {% csrf_token %}
-          <button type="submit" class="btn-danger" style="background-color:#e3342f;color:#fff;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;transition:background 0.2s;">
-            <i class="fas fa-trash-alt"></i> Delete
-          </button>
-        </form>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<style>
+.export-csv-btn {
+  background: #38b2ac;
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.export-csv-btn:hover {
+  background: #319795;
+}
+.input-text {
+  padding: 6px 10px;
+  margin: 8px 0;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.row {
+  display: flex;
+  align-items: center;  
+  justify-content: space-between;
+  gap: 16px;
+}
+.tab-buttons {
+  display: flex;
+  border-bottom: 2px solid #e2e8f0;
+  margin-top: 20px;
+}
+.tab-buttons button {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #4a5568;
+  transition: border-color 0.3s, color 0.3s;
+  border-bottom: 3px solid transparent;
+}
+.tab-buttons button.active {
+  border-color: #2c3e50;
+  color: #2c3e50;
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
 
-<hr />
-<h3>Add New Staff User</h3>
-<form method="post" class="add-staff-form">
-  {% csrf_token %}
-  <label>
-    Username: <input type="text" name="username" required class="input-text" />
-  </label>
-  <label>
-    Password:
-    <input type="password" name="password" required class="input-text" />
-  </label>
-  <button type="submit" class="btn-primary">Create Staff User</button>
-</form>
+</style>
+
+<script>
+function exportTableToCSV(filename) {
+    var csv = [];
+    var rows = document.querySelectorAll("table.data-table tr");
+    for (var i = 0; i < rows.length; i++) {
+        var row = [], cols = rows[i].querySelectorAll("td, th");
+        for (var j = 0; j < cols.length; j++)
+            row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+        csv.push(row.join(","));
+    }
+    // Download CSV
+    var csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+    var downloadLink = document.createElement("a");
+    downloadLink.download = filename;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+
+// Search filter function
+function filterTable() {
+    var input = document.getElementById("searchInput");
+    var filter = input.value.toLowerCase();
+    var table = document.getElementById("staffUsersTable");
+    var tr = table.getElementsByTagName("tr");
+
+    for (var i = 1; i < tr.length; i++) { // start at 1 to skip header row
+        var tdUsername = tr[i].getElementsByTagName("td")[0];
+        var tdRole = tr[i].getElementsByTagName("td")[1];
+        if (tdUsername && tdRole) {
+            var usernameText = tdUsername.textContent || tdUsername.innerText;
+            var roleText = tdRole.textContent || tdRole.innerText;
+            if (usernameText.toLowerCase().indexOf(filter) > -1 || roleText.toLowerCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+}
+function showTab(tabName) {
+  const tabs = document.querySelectorAll('.tab-content');
+  const buttons = document.querySelectorAll('.tab-buttons button');
+
+  tabs.forEach(tab => tab.classList.remove('active'));
+  buttons.forEach(btn => btn.classList.remove('active'));
+
+  document.getElementById(tabName).classList.add('active');
+  document.getElementById(tabName + '-btn').classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  showTab('add'); // Default to 'add' tab
+});
+</script>
+
+<div class="tab-container">
+  <div class="tab-buttons">
+    <button id="add-btn" onclick="showTab('add')">➕ Add Users</button>
+    <button id="view-btn" onclick="showTab('view')">👥 View Users</button>
+  </div>
+
+  <!-- Add Staff Tab -->
+  <div id="add" class="tab-content">
+    <h3>Add New Staff User</h3>
+    <form method="post" class="add-staff-form">
+      {% csrf_token %}
+      <label>
+        Username: <input type="text" name="username" required class="input-text" />
+      </label>
+      <label>
+        Password: <input type="password" name="password" required class="input-text" />
+      </label>
+      <label>
+        Role:
+        <select name="role" class="input-text">
+          <option value="admin">Admin</option>
+          <option value="client">Client</option>
+          <option value="staff">Staff</option>
+        </select>
+      </label>
+      <button type="submit" class="btn-primary">Create Staff User</button>
+    </form>
+  </div>
+
+  <!-- View Staff Tab -->
+  <div id="view" class="tab-content">
+    <div class="column">
+      <div class="row">
+        <label for="searchInput">Search by Username or Role:</label> 
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search users..." class="input-text" />
+        <button class="export-csv-btn" onclick="exportTableToCSV('staff_users.csv')">Export CSV</button>
+      </div>
+      <div>
+        <table id="staffUsersTable" class="data-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Date Joined</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in staff_users %}
+            <tr>
+              <td>{{ user.username }}</td>
+              <td>{{ user.role }}</td>
+              <td>{{ user.date_joined }}</td>
+              <td>
+                <form method="post" action="{% url 'admins:delete_staff_user' user.id %}" class="delete-form">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-danger" style="background-color:#e3342f;color:#fff;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;transition:background 0.2s;">
+                    <i class="fas fa-trash-alt"></i> Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

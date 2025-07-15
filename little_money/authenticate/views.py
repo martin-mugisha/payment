@@ -13,10 +13,12 @@ def user_login(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            if user.is_superuser:
+            if user.role == 'admin':
                 return redirect('admins:admin_dashboard')
-            elif user.is_staff_user:
+            elif user.role == 'staff':
                 return redirect('staff:staff_dashboard')
+            elif user.role == 'client':
+                return redirect('client:overview_dashboard')
             else:
                 messages.error(request, "Unauthorized user.")
                 logout(request)

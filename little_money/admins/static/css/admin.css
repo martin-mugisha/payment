@@ -117,16 +117,7 @@ body.dark-mode {
   transition: margin-left 0.3s ease;
 }
 
-/* --- Header --- */
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 25px;
-  flex-wrap: wrap;
-  gap: 15px; /* Added gap for better spacing */
-}
-
+/* --- header --- */
 header h1 {
   font-size: 1.2rem;
   color: inherit; /* Inherit color for theme changes */
@@ -145,7 +136,8 @@ header h1 {
 
 .header-right {
   display: flex;
-  align-items: center;
+  justify-content:  flex-end; /* moves items to the right */
+  align-items: center;       /* vertically center the items */
   gap: 20px;
   flex: 0 0 auto;
 }
@@ -499,13 +491,17 @@ form button:hover {
     padding: 15px 20px;
     width: 100%;
   }
-
-  header {
-    flex-direction: row; /* Keep header items in a row */
-    justify-content: space-between; /* Ensure proper spacing */
-    align-items: center;
-    gap: 10px;
-  }
+  header{
+  display:flex;
+  flex-direction: row; /* Keep header items in a row */
+  flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+  width: 100%;
+  margin-bottom: 20px; /* Adjusted for better spacing */
+  justify-content: space-between; /* Align items to the edges */
+  align-items: center;       /* vertically center the items */
+  gap: 20px;
+  flex: 0 0 auto;
+}
 }
 
 /* --- Dark mode overrides --- */

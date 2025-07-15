@@ -1,0 +1,17 @@
+{% extends "dashboard/base_loan_client.html" %}
+{% block title %}Accounts{% endblock %}
+
+{% block content %}
+<h2>Accounts</h2>
+
+<div class="linked-accounts">
+  <h3>Linked Account Information</h3>
+  <ul>
+    {% for account in linked_accounts %}
+    <li>{{ account.type }}: {{ account.details }} - Balance: {{ account.balance }}</li>
+    {% endfor %}
+  </ul>
+  <button>Add Account</button>
+  <button>Remove Account</button>
+</div>
+{% endblock %}

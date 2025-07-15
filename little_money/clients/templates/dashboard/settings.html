@@ -1,0 +1,24 @@
+{% extends "dashboard/base_loan_client.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<h2>Settings</h2>
+
+<div class="user-profile">
+  <h3>User Profile Information</h3>
+  <p>Name: {{ user_settings.profile_info.name }}</p>
+  <p>Email: {{ user_settings.profile_info.email }}</p>
+</div>
+
+<div class="security-settings">
+  <h3>Security Settings</h3>
+  <p>Password Set: {{ user_settings.security.password_set }}</p>
+  <p>Two-Factor Authentication Enabled: {{ user_settings.security.2fa_enabled }}</p>
+</div>
+
+<div class="notification-preferences">
+  <h3>Notification Preferences</h3>
+  <p>Email Notifications: {{ user_settings.notifications.email_notifications }}</p>
+  <p>SMS Notifications: {{ user_settings.notifications.sms_notifications }}</p>
+</div>
+{% endblock %}

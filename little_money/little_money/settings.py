@@ -14,14 +14,16 @@ from pathlib import Path
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
-load_dotenv()
-
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv()
+# SECURITY WARNING: keep the secret key used in production secret!
+# Set a default value for SECRET_KEY if not provided in .env
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'unsafe-secret')
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',') if host.strip()]
+# Application definition
 
 
 # Quick-start development settings - unsuitable for production
@@ -35,7 +37,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'drf_yasg',
     'core',
-    'payment',
+    'finance',
+    'config',
     'authenticate',
     'api',
     'clients',
@@ -55,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    #'config.middleware.MerchantAuthMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -83,9 +87,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASS')
 
-PAYMENT_AGGREGATOR_API_KEY = os.getenv('AGGREGATOR_API_KEY')
-PAYMENT_AGGREGATOR_BASE_URL = os.getenv('AGGREGATOR_BASE_URL', 'https://sandbox.api.aggregator.com')
-
 
 TEMPLATES = [
     {
@@ -111,8 +112,12 @@ WSGI_APPLICATION = 'little_money.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
 
@@ -141,7 +146,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Nairobi'
 
 USE_I18N = True
 
@@ -152,7 +157,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
 # Default primary key field type

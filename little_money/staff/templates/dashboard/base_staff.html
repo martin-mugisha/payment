@@ -5,6 +5,8 @@
     <meta charset="UTF-8" />
     <title>Staff Dashboard - {{ page_title }}</title>
     <link rel="stylesheet" href="{% static 'css/staff.css' %}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   </head>
   <body class="light-mode">
     <div class="dashboard-wrapper">
@@ -17,7 +19,7 @@
         </div>
         <nav>
           <a href="{% url 'staff:staff_dashboard' %}"
-            ><i class="fas fa-receipt"></i> My Transactions</a
+            ><i class="fas fa-receipt"></i> Overview</a
           >
           <a href="{% url 'staff:merchant_list' %}"
             ><i class="fas fa-users"></i> Merchants</a
@@ -52,7 +54,8 @@
 
       <!-- Main Content -->
       <div class="main-content">
-        <!-- Header -->
+        <header>
+          <!-- Header -->
         <button
           id="hamburger-btn"
           class="hamburger-btn"
@@ -60,8 +63,6 @@
         >
           &#9776;
         </button>
-        <header class="dashboard-header">
-          <h1 class="page-title">{% block title %}{% endblock %}</h1>
           <div class="header-right">
             <div class="toggle-theme">
               <i class="fas fa-sun"></i>

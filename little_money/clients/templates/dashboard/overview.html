@@ -1,0 +1,94 @@
+{% extends "dashboard/base_loan_client.html" %}
+{% block title %}Overview{% endblock %}
+
+{% block content %}
+<h2>Overview / Dashboard</h2>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px;">
+  <div class="kpi-card">
+    <h3>Balance Summary</h3>
+    <p>{{ balance_summary }}</p>
+  </div>
+
+  <div class="kpi-card">
+    <h3>Recent Transactions</h3>
+    <ul>
+      {% for txn in recent_transactions %}
+      <li>{{ txn.date }}: {{ txn.recipient }} - {{ txn.amount }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="kpi-card">
+    <h3>Upcoming Payments</h3>
+    <ul>
+      {% for payment in upcoming_payments %}
+      <li>{{ payment.date }}: {{ payment.description }} - {{ payment.amount }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="kpi-card">
+    <h3>Quick Links to Payment Methods</h3>
+    <ul>
+      {% for method in payment_methods %}
+      <li>{{ method }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<!-- Payment charts -->
+<div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px;">
+  <div style="flex: 1; min-width: 300px; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">
+    <h3>Payments This Week</h3>
+    <canvas id="paymentsWeekChart"></canvas>
+  </div>
+  <div style="flex: 1; min-width: 300px; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">
+    <h3>Payments This Month</h3>
+    <canvas id="paymentsMonthChart"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const paymentsWeekCtx = document.getElementById('paymentsWeekChart').getContext('2d');
+  const paymentsMonthCtx = document.getElementById('paymentsMonthChart').getContext('2d');
+
+  const paymentsWeekChart = new Chart(paymentsWeekCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ payments_week.labels|safe }},
+      datasets: [{
+        label: 'Payments This Week',
+        data: {{ payments_week.data|safe }},
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  const paymentsMonthChart = new Chart(paymentsMonthCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ payments_month.labels|safe }},
+      datasets: [{
+        label: 'Payments This Month',
+        data: {{ payments_month.data|safe }},
+        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+</script>
+{% endblock %}

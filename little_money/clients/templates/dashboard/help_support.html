@@ -1,0 +1,31 @@
+{% extends "dashboard/base_loan_client.html" %}
+{% block title %}Help / Support{% endblock %}
+
+{% block content %}
+<h2>Help / Support</h2>
+
+<div class="faqs">
+  <h3>FAQs</h3>
+  <ul>
+    {% for faq in faqs %}
+    <li><strong>{{ faq.question }}</strong><br />{{ faq.answer }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="contact-support">
+  <h3>Contact Support</h3>
+  <p>Email: {{ contact_info.email }}</p>
+  <p>Phone: {{ contact_info.phone }}</p>
+  <p>Chat: {{ contact_info.chat }}</p>
+</div>
+
+<div class="knowledge-base">
+  <h3>Knowledge Base / Blog</h3>
+  <ul>
+    {% for item in knowledge_base %}
+    <li><a href="{{ item.link }}">{{ item.title }}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

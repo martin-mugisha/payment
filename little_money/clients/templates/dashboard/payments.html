@@ -1,0 +1,56 @@
+{% extends "dashboard/base_loan_client.html" %}
+{% block title %}Payments{% endblock %}
+
+{% block content %}
+<h2>Payments</h2>
+
+<div style="display: flex; gap: 20px; flex-wrap: wrap;">
+  <div style="flex: 1; min-width: 300px; border: 1px solid #ccc; padding: 20px; border-radius: 8px;">
+    <h3>Single Payment</h3>
+    <form method="post" action="{% url 'client:payments' %}">
+      {% csrf_token %}
+      <label for="name">Name:</label>
+      <input type="text" id="name" name="name" required />
+      <br />
+      <label for="phone">Phone Number:</label>
+      <input type="text" id="phone" name="phone" required />
+      <br />
+      <label for="amount">Amount:</label>
+      <input type="number" id="amount" name="amount" step="0.01" required />
+      <br />
+      <label for="transaction_type">Transaction Type:</label>
+      <select id="transaction_type" name="transaction_type" required>
+        <option value="collection">Collection</option>
+        <option value="disbursement">Disbursement</option>
+      </select>
+      <br />
+      <label for="payment_method">Payment Method:</label>
+      <select id="payment_method" name="payment_method" required>
+        <option value="MTN">MTN</option>
+        <option value="Airtel">Airtel</option>
+      </select>
+      <br />
+      <button type="submit" name="single_payment">Send Payment</button>
+    </form>
+  </div>
+
+  <div style="flex: 1; min-width: 300px; border: 1px solid #ccc; padding: 20px; border-radius: 8px;">
+    <h3>Multiple Payments</h3>
+    <form method="post" action="{% url 'client:payments' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label for="payment_file">Upload Excel File:</label>
+      <input type="file" id="payment_file" name="payment_file" accept=".xls,.xlsx" required />
+      <br />
+      <button type="submit" name="multiple_payments">Upload and Process</button>
+    </form>
+  </div>
+</div>
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

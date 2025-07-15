@@ -1,0 +1,30 @@
+{% extends "dashboard/base_loan_client.html" %}
+{% block title %}Transactions{% endblock %}
+
+{% block content %}
+<h2>Transaction History</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Amount</th>
+      <th>Recipient</th>
+      <th>Phone Number</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for txn in transaction_history %}
+    <tr>
+      <td>{{ txn.date }}</td>
+      <td>{{ txn.amount }}</td>
+      <td>{{ txn.recipient }}</td>
+      <td>{{ txn.phone }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<button>Download Statements</button>
+<button>Download Receipts</button>
+{% endblock %}

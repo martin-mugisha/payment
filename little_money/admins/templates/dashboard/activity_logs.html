@@ -1,0 +1,158 @@
+{% extends "dashboard/base_admin.html" %}
+{% block title %}Activity Logs{% endblock %}
+
+{% block content %}
+<h3>Activity Logs</h3>
+
+<style>
+.export-csv-btn {
+  background: #38b2ac;
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.export-csv-btn:hover {
+  background: #319795;
+}
+.input-text {
+  padding: 6px 10px;
+  margin: 8px 0;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.row {
+  display: flex;
+  align-items: center;  
+  justify-content: space-between;
+  gap: 16px;
+}
+</style>
+
+<script>
+function exportTableToCSV(filename) {
+    var csv = [];
+    var rows = document.querySelectorAll("table.data-table tr");
+    for (var i = 0; i < rows.length; i++) {
+        var row = [], cols = rows[i].querySelectorAll("td, th");
+        for (var j = 0; j < cols.length; j++)
+            row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+        csv.push(row.join(","));
+    }
+    // Download CSV
+    var csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+    var downloadLink = document.createElement("a");
+    downloadLink.download = filename;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+
+// Search filter function
+function filterTable() {
+    var input = document.getElementById("searchInput");
+    var filter = input.value.toLowerCase();
+    var table = document.getElementById("staffUsersTable");
+    var tr = table.getElementsByTagName("tr");
+
+    for (var i = 1; i < tr.length; i++) { // start at 1 to skip header row
+        var tdUsername = tr[i].getElementsByTagName("td")[0];
+        var tdRole = tr[i].getElementsByTagName("td")[1];
+        if (tdUsername && tdRole) {
+            var usernameText = tdUsername.textContent || tdUsername.innerText;
+            var roleText = tdRole.textContent || tdRole.innerText;
+            if (usernameText.toLowerCase().indexOf(filter) > -1 || roleText.toLowerCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+}
+</script>
+
+
+<div class="column">
+  <div class="row">
+    <label for="searchInput">Search by Username or Action:</label> 
+<input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search users..." class="input-text" />
+<button class="export-csv-btn" onclick="exportTableToCSV('staff_users.csv')">Export CSV</button>
+  </div>
+<div>
+  Staff Users Table 
+  <table id= "staffUsersTable" class="data-table">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Action</th>
+      <th>Model</th>
+      <th>IP Address / Action</th>
+      <th>Timestamp</th>
+    </tr>
+  </thead>
+<tbody>
+  {% for log in logs %}
+  <tr>
+    <td>
+      {% if log.user %}
+        {{ log.user.username }}
+      {% else %}
+        System
+      {% endif %}
+    </td>
+    <td>
+      {% if log.log_type == 'logentry' %}
+        {% if log.action_flag == 1 %}Added{% elif log.action_flag == 2 %}Changed{% elif log.action_flag == 3 %}Deleted{% else %}Unknown{% endif %}
+      {% elif log.log_type == 'authlog' %}
+        {{ log.action|title }}
+      {% else %}
+        Unknown
+      {% endif %}
+    </td>
+    <td>
+      {% if log.log_type == 'logentry' %}
+        {{ log.content_type.app_label }}.{{ log.content_type.model }}
+      {% elif log.log_type == 'authlog' %}
+        Authentication
+      {% else %}
+        -
+      {% endif %}
+    </td>
+    <td>
+      {% if log.log_type == 'logentry' %}
+        {{ log.object_repr }}
+      {% elif log.log_type == 'authlog' %}
+        IP: {{ log.ip_address }}
+      {% else %}
+        -
+      {% endif %}
+    </td>
+    <td>
+      {% if log.log_type == 'logentry' %}
+        {{ log.action_time }}
+      {% elif log.log_type == 'authlog' %}
+        {{ log.timestamp }}
+      {% else %}
+        -
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="5">No activity logs found.</td></tr>
+  {% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+{% endblock %}

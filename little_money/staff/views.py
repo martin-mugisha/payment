@@ -2,57 +2,34 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render
 from django.db.models.functions import TruncWeek, TruncMonth, TruncDate
 from .models import Withdrawal
-from payment.models import Transaction
 from django.db.models import Sum
 import csv
 from django.http import HttpResponse
+from core.utils import is_staff
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def earnings(request):
-    transactions = Transaction.objects.filter(user=request.user, status='SUCCESS')
-
-    total_staff_earnings = transactions.aggregate(Sum('total_amount'))['total_amount__sum'] or 0.00
-
-    daily_earnings = (
-        transactions
-        .annotate(day=TruncDate('created_at'))
-        .values('day')
-        .annotate(total_earnings=Sum('total_amount'))
-        .order_by('day')
-    )
-
-    weekly_earnings = (
-        transactions
-        .annotate(week=TruncWeek('created_at'))
-        .values('week')
-        .annotate(total_earnings=Sum('total_amount'))
-        .order_by('week')
-    )
-
-    monthly_earnings = (
-        transactions
-        .annotate(month=TruncMonth('created_at'))
-        .values('month')
-        .annotate(total_earnings=Sum('total_amount'))
-        .order_by('month')
-    )
-
-    withdrawals = Withdrawal.objects.filter(user=request.user).order_by('-requested_on')
+    # Dummy earnings data for testing
+    earnings_data = [
+        {'date': '2025-07-01', 'amount': 500000, 'type': 'Commission'},
+        {'date': '2025-07-02', 'amount': 250000, 'type': 'Bonus'},
+        {'date': '2025-07-03', 'amount': 100000, 'type': 'Commission'},
+    ]
+    total_earnings = sum(item['amount'] for item in earnings_data)
+    chart_labels = [item['date'] for item in earnings_data]
+    chart_data = [item['amount'] for item in earnings_data]
 
     return render(request, 'dashboard/earnings.html', {
-        'daily_earnings': daily_earnings,
-        'weekly_earnings': weekly_earnings,
-        'monthly_earnings': monthly_earnings,
-        'total_staff_earnings': total_staff_earnings,
-        'withdrawals': withdrawals,
-        'start_date': request.GET.get('start_date', ''),
-        'end_date': request.GET.get('end_date', ''),
+        'earnings': earnings_data,
+        'total_earnings': total_earnings,
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
     })
 
 # Export Transactions CSV
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def export_csv(request):
     response = HttpResponse(content_type='text/csv')
     return response
@@ -63,22 +40,27 @@ def profile_view(request):
 
 # Placeholder views for missing staff templates
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def merchant_list(request):
-    return render(request, 'dashboard/merchant_list.html')
+    merchants = [
+        {'id': 1, 'name': 'Merchant A', 'joined': '2025-05-10', 'status': 'Active'},
+        {'id': 2, 'name': 'Merchant B', 'joined': '2025-06-01', 'status': 'Inactive'},
+    ]
+    return render(request, 'dashboard/merchant_list.html', {'merchants': merchants})
+
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def profile_staff(request):
     return render(request, 'dashboard/profile_staff.html')
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def earnings(request):
     return render(request, 'dashboard/earnings.html')
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def dispute_management(request):
     disputes = [
         {'id': 1, 'transaction_id': 'TXN10001', 'reason': 'Product not delivered', 'status': 'Open', 'created_at': '2025-06-20'},
@@ -88,12 +70,12 @@ def dispute_management(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def refund_processing(request):
     return render(request, 'dashboard/refund_processing.html')
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def failed_transactions(request):
     failed_transactions = Transaction.objects.filter(user=request.user, status='FAILED')
     return render(request, 'dashboard/failed_transactions.html', {
@@ -101,7 +83,7 @@ def failed_transactions(request):
     })
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def support_tickets(request):
     tickets = [
         {'id': 501, 'subject': 'Refund request', 'status': 'Pending', 'created_at': '2025-06-22'},
@@ -111,7 +93,7 @@ def support_tickets(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def suspicious_activity(request):
     activities = [
         {'id': 1, 'activity': 'Multiple failed login attempts', 'user': 'staff1', 'timestamp': '2025-06-23 10:30'},
@@ -120,7 +102,7 @@ def suspicious_activity(request):
     return render(request, 'dashboard/suspicious_activity.html', {'activities': activities})
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def audit_logs(request):
     logs = [
         {'id': 1, 'action': 'Updated profile', 'user': 'staff1', 'timestamp': '2025-06-23 09:45'},
@@ -130,17 +112,17 @@ def audit_logs(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def base_staff(request):
     return render(request, 'dashboard/base_staff.html')
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def staff(request):
     return render(request, 'dashboard/staff.html')
 
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def payout_management(request):
     payouts = [
         {'id': 1, 'merchant': 'Employee 1', 'amount': 1200000, 'status': 'Processing', 'requested_on': '2025-06-20'},
@@ -150,9 +132,29 @@ def payout_management(request):
 
 # Staff Dashboard with Chart Data
 @login_required
-@user_passes_test(lambda u: u.is_staff_user)
+@user_passes_test(is_staff)
 def staff_dashboard(request):
-    transactions = Transaction.objects.filter(user=request.user)
+    # Dummy transactions data for testing
+    transactions = [
+        {'id': 101, 'date': '2025-07-01', 'amount': 150000, 'status': 'SUCCESS', 'type': 'Withdrawal'},
+        {'id': 102, 'date': '2025-07-02', 'amount': 50000, 'status': 'FAILED', 'type': 'Deposit'},
+        {'id': 103, 'date': '2025-07-03', 'amount': 200000, 'status': 'SUCCESS', 'type': 'Withdrawal'},
+    ]
+    total_transactions = len(transactions)
+    total_success = sum(1 for t in transactions if t['status'] == 'SUCCESS')
+    total_failed = sum(1 for t in transactions if t['status'] == 'FAILED')
+    total_amount = sum(t['amount'] for t in transactions)
+
+    # Example chart data
+    chart_labels = [t['date'] for t in transactions]
+    chart_data = [t['amount'] for t in transactions]
+
     return render(request, 'dashboard/staff.html', {
         'transactions': transactions,
+        'total_transactions': total_transactions,
+        'total_success': total_success,
+        'total_failed': total_failed,
+        'total_amount': total_amount,
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
     })

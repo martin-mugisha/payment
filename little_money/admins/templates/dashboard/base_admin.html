@@ -5,6 +5,8 @@
     <meta charset="UTF-8" />
     <title>Admin Dashboard - {{ page_title }}</title>
     <link rel="stylesheet" href="{% static 'css/admin.css' %}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
@@ -21,16 +23,15 @@
         </div>
         <nav>
           <a href="{% url 'admins:admin_dashboard' %}"
-            ><i class="fas fa-receipt"></i> Transactions</a
+            ><i class="fas fa-receipt"></i> Overview</a
+          >
+           <a href="{% url 'admins:activity_logs' %}"
+            ><i class="fas fa-clipboard-list"></i> Staff Logs</a>
+            <a href="{% url 'admins:staff_users' %}"
+            ><i class="fas fa-users"></i> Staff Users</a
           >
           <a href="{% url 'admins:platform_settings' %}"
             ><i class="fas fa-cogs"></i> Platform Settings</a
-          >
-          <a href="{% url 'admins:staff_users' %}"
-            ><i class="fas fa-users"></i> Staff Users</a
-          >
-          <a href="{% url 'admins:export_csv' %}"
-            ><i class="fas fa-download"></i> Export CSV</a
           >
           <a href="{% url 'admins:payouts_overview' %}"
             ><i class="fas fa-wallet"></i> Payouts</a
@@ -48,15 +49,14 @@
       </aside>
 
       <div class="main-content">
-        <button
+        <header>
+          <button
           id="hamburger-btn"
           class="hamburger-btn"
           aria-label="Toggle sidebar"
         >
           &#9776;
         </button>
-        <header>
-          <h1>{% block title %}{% endblock %}</h1>
           <div class="header-right">
             <div class="toggle-theme">
               <i class="fas fa-sun"></i>

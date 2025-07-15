@@ -1,52 +1,44 @@
+from django.contrib.admin.models import LogEntry
+from .models import AuthLog
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
+from .models import AuthLog
 from core.models import CustomUser
-from payment.models import PlatformSettings, Transaction
+from finance.models import PlatformSettings
 from django.db.models.functions import TruncDate
-import csv
-from django.http import HttpResponse
+from django.contrib.admin.models import LogEntry, CHANGE, ADDITION, DELETION
 from django.db.models import Sum
 import json
 from django.contrib import messages
+from core.utils import is_admin
+from django.shortcuts import render
+from django.utils.timezone import localtime
+from finance.models import SystemEarnings
+from django.db import models
 
+# Admin Dashboard View
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def admin_dashboard(request):
-    transactions = Transaction.objects.all()
+    # Fetch all system earnings/statistics
+    earnings = SystemEarnings.objects.all().order_by('-last_updated')
+    total_revenue = earnings.aggregate(total=models.Sum('total_earnings'))['total'] or 0.00
 
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    if start_date:
-        transactions = transactions.filter(created_at__date__gte=start_date)
-    if end_date:
-        transactions = transactions.filter(created_at__date__lte=end_date)
-
-    total_platform_earnings = transactions.filter(status='SUCCESS').aggregate(Sum('platform_fee_amount'))['platform_fee_amount__sum'] or 0.00
-
-    # CHART DATA
-    daily_earnings = (
-        transactions.filter(status='SUCCESS')
-        .annotate(day=TruncDate('created_at'))
-        .values('day')
-        .annotate(total_fee=Sum('platform_fee_amount'))
-        .order_by('day')
-    )
-
-    chart_labels = [entry['day'].strftime("%Y-%m-%d") for entry in daily_earnings]
-    chart_data = [float(entry['total_fee']) for entry in daily_earnings]
+    # Prepare chart data for the last 10 records (or whatever makes sense)
+    recent_earnings = earnings[:10][::-1]  # reverse for chronological order
+    chart_labels = [e.last_updated.strftime("%Y-%m-%d") for e in recent_earnings]
+    chart_data = [float(e.total_earnings) for e in recent_earnings]
 
     return render(request, 'dashboard/admin.html', {
-        'transactions': transactions,
-        'total_platform_earnings': total_platform_earnings,
-        'start_date': start_date,
-        'end_date': end_date,
+        'earnings': earnings,
+        'total_revenue': total_revenue,
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
     })
 
 # Platform Fee Settings
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def platform_settings(request):
     settings_obj = PlatformSettings.objects.first()
 
@@ -63,47 +55,24 @@ def platform_settings(request):
         'settings': settings_obj
     })
 
-# Export Transactions CSV
+
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
-def export_csv(request):
-    transactions = Transaction.objects.all()
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow(['Transaction ID', 'User', 'Base Amount', 'Platform Fee %', 'Platform Fee Amount', 'Total', 'Status', 'Created At'])
-
-    for txn in transactions:
-        writer.writerow([
-            txn.transaction_id,
-            txn.user.username,
-            txn.base_amount,
-            txn.platform_fee_percent,
-            txn.platform_fee_amount,
-            txn.total_amount,
-            txn.status,
-            txn.created_at
-        ])
-
-    return response
-
-# Manage Staff Users (Admin Only)
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def staff_users(request):
-    staff_users = CustomUser.objects.filter(is_staff_user=True)
+    staff_users = CustomUser.objects.filter(is_active=True)
 
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
+        role = request.POST.get('role', 'halfadmin')  # default to halfadmin
 
         if username and password:
             if not CustomUser.objects.filter(username=username).exists():
                 new_user = CustomUser.objects.create_user(username=username, password=password)
                 new_user.is_staff_user = True
+                new_user.role = role  
                 new_user.save()
-                messages.success(request, f"Staff user '{username}' created.")
+                messages.success(request, f"Staff user '{username}' with role '{role}' created.")
             else:
                 messages.error(request, "Username already exists.")
 
@@ -112,9 +81,9 @@ def staff_users(request):
     })
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def staff_user_delete(request, user_id):
-    user = get_object_or_404(CustomUser, id=user_id, is_staff_user=True)
+    user = get_object_or_404(CustomUser, id=user_id, is_active=True)
     if request.method == 'POST':
         user.delete()
         messages.success(request, f"Staff user '{user.username}' deleted.")
@@ -127,7 +96,7 @@ def profile_view(request):
 
 # Payouts Overview View
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def payouts_overview(request):
     # Sample payout data for demonstration
     payouts = [
@@ -138,7 +107,7 @@ def payouts_overview(request):
 
 # Placeholder views for missing admin templates
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def kyc_status(request):
     kyc_entries = [
         {'id': 1, 'merchant_name': 'Merchant A', 'kyc_status': 'Approved', 'last_updated': '2025-06-21'},
@@ -149,7 +118,7 @@ def kyc_status(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def chargebacks(request):
     chargebacks = [
         {'id': 101, 'merchant_name': 'Merchant A', 'amount': 250, 'reason': 'Fraud', 'status': 'Under Review', 'created_at': '2025-06-18'},
@@ -159,17 +128,42 @@ def chargebacks(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def risk_alerts(request):
     return render(request, 'dashboard/risk_alerts.html')
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def profile_admin(request):
     return render(request, 'dashboard/profile.html')
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(is_admin)
 def staff_user(request):
     return render(request, 'dashboard/staff_user.html')
 
+"""@login_required
+@user_passes_test(is_admin)  
+def activity_logs(request):
+    # Fetch all log entries ordered by action time descending
+    logs = LogEntry.objects.select_related('user').order_by('-action_time')[:100]  # limit to last 100 entries
+
+    # Pass logs to template
+    return render(request, 'dashboard/activity_logs.html', {'logs': logs})
+"""
+
+@login_required
+@user_passes_test(is_admin)
+def activity_logs(request):
+    admin_logs = list(LogEntry.objects.select_related('user', 'content_type').all())
+    auth_logs = list(AuthLog.objects.select_related('user').all())
+
+    # Annotate each with a type
+    for log in admin_logs:
+        log.log_type = 'logentry'
+    for log in auth_logs:
+        log.log_type = 'authlog'
+
+    all_logs = sorted(admin_logs + auth_logs, key=lambda x: x.timestamp if hasattr(x, 'timestamp') else x.action_time, reverse=True)
+
+    return render(request, 'dashboard/activity_logs.html', {'logs': all_logs})
