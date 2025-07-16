@@ -79,6 +79,7 @@
   <body>
     <main>
       <form method="post" class="login-form">
+      {% csrf_token %}
         <h2>Staff Login</h2>
         {% if messages %} {% for message in messages %}
         <p class="message">{{ message }}</p>
