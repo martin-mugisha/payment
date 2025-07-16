@@ -79,7 +79,7 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'core.CustomUser'
-STATIC_URL = '/static/'
+STATIC_URL = 'https://mangupay.tech/static/'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.example.com')
 EMAIL_PORT = os.getenv('EMAIL_PORT', 587)
