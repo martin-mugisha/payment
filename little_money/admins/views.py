@@ -164,6 +164,23 @@ def activity_logs(request):
     for log in auth_logs:
         log.log_type = 'authlog'
 
-    all_logs = sorted(admin_logs + auth_logs, key=lambda x: x.timestamp if hasattr(x, 'timestamp') else x.action_time, reverse=True)
+    # Separate logs by user role
+    staff_logs = []
+    client_logs = []
 
-    return render(request, 'dashboard/activity_logs.html', {'logs': all_logs})
+    for log in admin_logs + auth_logs:
+        user = getattr(log, 'user', None)
+        if user and hasattr(user, 'role'):
+            if user.role == 'staff':
+                staff_logs.append(log)
+            elif user.role == 'client':
+                client_logs.append(log)
+        else:
+            # Logs without user or unknown role can be added to staff_logs by default
+            staff_logs.append(log)
+
+    # Sort logs by timestamp descending
+    staff_logs = sorted(staff_logs, key=lambda x: x.timestamp if hasattr(x, 'timestamp') else x.action_time, reverse=True)
+    client_logs = sorted(client_logs, key=lambda x: x.timestamp if hasattr(x, 'timestamp') else x.action_time, reverse=True)
+
+    return render(request, 'dashboard/activity_logs.html', {'staff_logs': staff_logs, 'client_logs': client_logs})

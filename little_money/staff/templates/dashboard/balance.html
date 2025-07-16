@@ -1,0 +1,122 @@
+{% extends "dashboard/base_staff.html" %} {% block content %}
+<h1>Balance</h1>
+
+<div class="kpi-cards">
+  <section class="kpi-card">
+    <h3>Current Balance</h3>
+    <p>UGX {{ current_balance }}</p>
+    <p>Phone Number: {{ account_number }}</p>
+    <p>Network: {{ account_type }}</p>
+  </section>
+</div>
+
+<div class="tab-container">
+  <div class="tab-buttons">
+    <button id="accountBalance-btn" onclick="showTab('accountBalance')">
+      Account Balance
+    </button>
+    <button id="withdraw-btn" onclick="showTab('withdraw')">Withdraw</button>
+    <button id="withdrawHistory-btn" onclick="showTab('withdrawHistory')">
+      Withdraw History
+    </button>
+  </div>
+
+  <div id="accountBalance" class="tab-content">
+    <h3>Account Balance</h3>
+    <p>Current Balance: UGX {{ current_balance }}</p>
+    <p>Last Updated: {{ last_updated }}</p>
+    <p>Available Credit: {{ available_credit }}</p>
+  </div>
+
+  <div id="withdraw" class="tab-content">
+    <h3>Withdraw</h3>
+    <form method="post" action="#">
+      <label for="name">Name:</label><br />
+      <input type="text" id="name" name="name" required /><br />
+
+      <label for="number">Number:</label><br />
+      <input type="text" id="number" name="number" required /><br />
+
+      <label for="network">Network:</label><br />
+      <select id="network" name="network" required>
+        <option value="mtn">MTN</option>
+        <option value="airtel">Airtel</option></select
+      ><br /><br />
+
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+
+  <div id="withdrawHistory" class="tab-content">
+    <h3>Withdraw History</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Number</th>
+          <th>Network</th>
+          <th>Amount (UGX)</th>
+          <th>Date Withdrawn</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in withdraw_history %}
+        <tr>
+          <td>{{ w.name }}</td>
+          <td>{{ w.number }}</td>
+          <td>{{ w.network }}</td>
+          <td>{{ w.amount }}</td>
+          <td>{{ w.date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function showTab(tabName) {
+    const tabs = document.querySelectorAll(".tab-content");
+    const buttons = document.querySelectorAll(".tab-buttons button");
+
+    tabs.forEach((tab) => tab.classList.remove("active"));
+    buttons.forEach((btn) => btn.classList.remove("active"));
+
+    document.getElementById(tabName).classList.add("active");
+    document.getElementById(tabName + "-btn").classList.add("active");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    showTab("accountBalance"); // Default to 'accountBalance' tab
+  });
+</script>
+
+<style>
+  .tab-buttons {
+    display: flex;
+    border-bottom: 2px solid #e2e8f0;
+    margin-top: 20px;
+  }
+  .tab-buttons button {
+    background: none;
+    border: none;
+    padding: 12px 24px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #4a5568;
+    transition: border-color 0.3s, color 0.3s;
+    border-bottom: 3px solid transparent;
+  }
+  .tab-buttons button.active {
+    border-color: #2c3e50;
+    color: #2c3e50;
+  }
+  .tab-content {
+    display: none;
+  }
+  .tab-content.active {
+    display: block;
+  }
+</style>
+
+{% endblock %}

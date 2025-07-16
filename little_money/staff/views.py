@@ -7,154 +7,126 @@ import csv
 from django.http import HttpResponse
 from core.utils import is_staff
 
-@login_required
-@user_passes_test(is_staff)
-def earnings(request):
-    # Dummy earnings data for testing
-    earnings_data = [
-        {'date': '2025-07-01', 'amount': 500000, 'type': 'Commission'},
-        {'date': '2025-07-02', 'amount': 250000, 'type': 'Bonus'},
-        {'date': '2025-07-03', 'amount': 100000, 'type': 'Commission'},
-    ]
-    total_earnings = sum(item['amount'] for item in earnings_data)
-    chart_labels = [item['date'] for item in earnings_data]
-    chart_data = [item['amount'] for item in earnings_data]
-
-    return render(request, 'dashboard/earnings.html', {
-        'earnings': earnings_data,
-        'total_earnings': total_earnings,
-        'chart_labels': chart_labels,
-        'chart_data': chart_data,
-    })
-
-# Export Transactions CSV
-@login_required
-@user_passes_test(is_staff)
-def export_csv(request):
-    response = HttpResponse(content_type='text/csv')
-    return response
 # Profile View
 @login_required
 def profile_view(request):
     return render(request, 'dashboard/admin/profile.html', {'user': request.user})
 
-# Placeholder views for missing staff templates
 @login_required
-@user_passes_test(is_staff)
-def merchant_list(request):
-    merchants = [
-        {'id': 1, 'name': 'Merchant A', 'joined': '2025-05-10', 'status': 'Active'},
-        {'id': 2, 'name': 'Merchant B', 'joined': '2025-06-01', 'status': 'Inactive'},
+def summary_dashboard(request):
+    # Sample data for charts
+    weekly_labels = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7']
+    weekly_data = [100000, 150000, 70000, 120000, 200000, 180000, 250000]
+
+    monthly_labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
+    monthly_data = [5000000, 6000000, 5500000, 7000000]
+
+    balance = 1234500
+    transactions_count = 150
+    active_clients = 38
+    earnings = 3000000
+
+    context = {
+        'weekly_labels': weekly_labels,
+        'weekly_data': weekly_data,
+        'monthly_labels': monthly_labels,
+        'monthly_data': monthly_data,
+        'current_balance': balance,
+        'transactions': transactions_count,
+        'active_clients': active_clients,
+        'monthly_total': earnings,
+
+    }
+    return render(request, 'dashboard/summary_dashboard.html', context)
+
+@login_required
+def balance(request):
+    current_balance = 1234500
+    account_number = '078456789'
+    account_type = 'MTN Mobile Money'
+    last_updated = '2024-06-01'
+    withdraw_history = [
+        {'name': 'John Doe', 'number': '0784567890', 'network': 'MTN', 'amount': 100000.00, 'date': '2024-05-25'},
+        {'name': 'Jane Smith', 'number': '0757654321', 'network': 'Airtel', 'amount': 50000.00, 'date': '2024-05-28'},
     ]
-    return render(request, 'dashboard/merchant_list.html', {'merchants': merchants})
-
-
-@login_required
-@user_passes_test(is_staff)
-def profile_staff(request):
-    return render(request, 'dashboard/profile_staff.html')
-
-@login_required
-@user_passes_test(is_staff)
-def earnings(request):
-    return render(request, 'dashboard/earnings.html')
+    context = {
+        'current_balance': current_balance,
+        'account_number': account_number,
+        'account_type': account_type,
+        'last_updated': last_updated,
+        'withdraw_history': withdraw_history,
+    }
+    return render(request, 'dashboard/balance.html', context)
 
 @login_required
-@user_passes_test(is_staff)
-def dispute_management(request):
-    disputes = [
-        {'id': 1, 'transaction_id': 'TXN10001', 'reason': 'Product not delivered', 'status': 'Open', 'created_at': '2025-06-20'},
-        {'id': 2, 'transaction_id': 'TXN10002', 'reason': 'Duplicate charge', 'status': 'Closed', 'created_at': '2025-06-19'},
+def transactions(request):
+    transactions_list = [
+        {'name': 'John Doe', 'number': '07844567890', 'network': 'MTN', 'status': 'Completed', 'reason': 'Payment', 'amount': 1000000.00},
+        {'name': 'Jane Smith', 'number': '0757654321', 'network': 'Airtel', 'status': 'Pending', 'reason': 'Refund', 'amount': 500000.00},
+        {'name': 'Bob Johnson', 'number': '0772334455', 'network': 'MTN', 'status': 'Failed', 'reason': 'Chargeback', 'amount': 750000.00},
     ]
-    return render(request, 'dashboard/dispute_management.html', {'disputes': disputes})
-
-
-@login_required
-@user_passes_test(is_staff)
-def refund_processing(request):
-    return render(request, 'dashboard/refund_processing.html')
+    context = {
+        'transactions': transactions_list,
+    }
+    return render(request, 'dashboard/transaction.html', context)
 
 @login_required
-@user_passes_test(is_staff)
-def failed_transactions(request):
-    failed_transactions = Transaction.objects.filter(user=request.user, status='FAILED')
-    return render(request, 'dashboard/failed_transactions.html', {
-        'failed_transactions': failed_transactions
-    })
-
-@login_required
-@user_passes_test(is_staff)
-def support_tickets(request):
-    tickets = [
-        {'id': 501, 'subject': 'Refund request', 'status': 'Pending', 'created_at': '2025-06-22'},
-        {'id': 502, 'subject': 'Account issue', 'status': 'Resolved', 'created_at': '2025-06-21'},
+def my_earning(request):
+    weekly_earnings = [
+        {'day': 'Monday', 'amount': 150000.00},
+        {'day': 'Tuesday', 'amount': 180000.00},
+        {'day': 'Wednesday', 'amount': 200000.00},
+        {'day': 'Thursday', 'amount': 170000.00},
+        {'day': 'Friday', 'amount': 220000.00},
+        {'day': 'Saturday', 'amount': 130000.00},
+        {'day': 'Sunday', 'amount': 150000.00},
     ]
-    return render(request, 'dashboard/support_tickets.html', {'tickets': tickets})
+    weekly_total = sum(item['amount'] for item in weekly_earnings)
 
-
-@login_required
-@user_passes_test(is_staff)
-def suspicious_activity(request):
-    activities = [
-        {'id': 1, 'activity': 'Multiple failed login attempts', 'user': 'staff1', 'timestamp': '2025-06-23 10:30'},
-        {'id': 2, 'activity': 'Unusual withdrawal pattern', 'user': 'staff2', 'timestamp': '2025-06-22 14:15'},
+    monthly_earnings = [
+        {'week': 'Week 1', 'amount': 3000000.00},
+        {'week': 'Week 2', 'amount': 3500000.00},
+        {'week': 'Week 3', 'amount': 2800000.00},
+        {'week': 'Week 4', 'amount': 2700000.00},
     ]
-    return render(request, 'dashboard/suspicious_activity.html', {'activities': activities})
+    monthly_total = sum(item['amount'] for item in monthly_earnings)
 
-@login_required
-@user_passes_test(is_staff)
-def audit_logs(request):
-    logs = [
-        {'id': 1, 'action': 'Updated profile', 'user': 'staff1', 'timestamp': '2025-06-23 09:45'},
-        {'id': 2, 'action': 'Approved transaction', 'user': 'staff2', 'timestamp': '2025-06-22 16:10'},
+    highest_earnings = [
+        {'user': 'Arme Corp', 'amount': 500000.00, 'date': '2024-05-20'},
+        {'user': 'Simple Loans', 'amount': 450000.00, 'date': '2024-05-18'},
     ]
-    return render(request, 'dashboard/audit_logs.html', {'logs': logs})
 
-
-@login_required
-@user_passes_test(is_staff)
-def base_staff(request):
-    return render(request, 'dashboard/base_staff.html')
-
-@login_required
-@user_passes_test(is_staff)
-def staff(request):
-    return render(request, 'dashboard/staff.html')
-
-@login_required
-@user_passes_test(is_staff)
-def payout_management(request):
-    payouts = [
-        {'id': 1, 'merchant': 'Employee 1', 'amount': 1200000, 'status': 'Processing', 'requested_on': '2025-06-20'},
-        {'id': 2, 'merchant': 'Emploee 2', 'amount': 800000, 'status': 'Completed', 'requested_on': '2025-06-19'},
+    lowest_earnings = [
+        {'user': 'Bob Johnson', 'amount': 20000.00, 'date': '2024-05-22'},
+        {'user': 'Alice Namara', 'amount': 25000.00, 'date': '2024-05-19'},
     ]
-    return render(request, 'dashboard/payout_management.html', {'payouts': payouts})
 
-# Staff Dashboard with Chart Data
+    context = {
+        'weekly_earnings': weekly_earnings,
+        'weekly_total': weekly_total,
+        'monthly_earnings': monthly_earnings,
+        'monthly_total': monthly_total,
+        'highest_earnings': highest_earnings,
+        'lowest_earnings': lowest_earnings,
+    }
+    return render(request, 'dashboard/my_earning.html', context)
+
 @login_required
-@user_passes_test(is_staff)
-def staff_dashboard(request):
-    # Dummy transactions data for testing
-    transactions = [
-        {'id': 101, 'date': '2025-07-01', 'amount': 150000, 'status': 'SUCCESS', 'type': 'Withdrawal'},
-        {'id': 102, 'date': '2025-07-02', 'amount': 50000, 'status': 'FAILED', 'type': 'Deposit'},
-        {'id': 103, 'date': '2025-07-03', 'amount': 200000, 'status': 'SUCCESS', 'type': 'Withdrawal'},
+def clients(request):
+    total_clients = 45
+    active_clients = 38
+    inactive_clients = 7
+    
+    clients_list = [
+        {'name': 'Acme Corp', 'business_type': 'Retail', 'id': '001', 'status': 'Active', 'balance': 12345000.67},
+        {'name': 'Beta LLC', 'business_type': 'Wholesale', 'id': '002', 'status': 'Inactive', 'balance': 8765000.43},
     ]
-    total_transactions = len(transactions)
-    total_success = sum(1 for t in transactions if t['status'] == 'SUCCESS')
-    total_failed = sum(1 for t in transactions if t['status'] == 'FAILED')
-    total_amount = sum(t['amount'] for t in transactions)
-
-    # Example chart data
-    chart_labels = [t['date'] for t in transactions]
-    chart_data = [t['amount'] for t in transactions]
-
-    return render(request, 'dashboard/staff.html', {
-        'transactions': transactions,
-        'total_transactions': total_transactions,
-        'total_success': total_success,
-        'total_failed': total_failed,
-        'total_amount': total_amount,
-        'chart_labels': chart_labels,
-        'chart_data': chart_data,
-    })
+    total_balance = sum(client['balance'] for client in clients_list)
+    context = {
+        'total_clients': total_clients,
+        'active_clients': active_clients,
+        'inactive_clients': inactive_clients,
+        'total_balance': total_balance,
+        'clients': clients_list,
+    }
+    return render(request, 'dashboard/clients.html', context)

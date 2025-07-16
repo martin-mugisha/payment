@@ -1,0 +1,27 @@
+{% extends "dashboard/base_staff.html" %} {% block content %}
+<h1>Transactions</h1>
+<p>Total Transactions: {{ transactions|length }}</p>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Number</th>
+      <th>Status</th>
+      <th>Reason</th>
+      <th>Amount (UGX)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in transactions %}
+    <tr>
+      <td>{{ t.name }}</td>
+      <td>{{ t.number }}</td>
+      <td>{{ t.status }}</td>
+      <td>{{ t.reason }}</td>
+      <td>{{ t.amount }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

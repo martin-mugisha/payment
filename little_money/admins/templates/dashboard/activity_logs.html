@@ -1,52 +1,79 @@
-{% extends "dashboard/base_admin.html" %}
-{% block title %}Activity Logs{% endblock %}
-
+<!-- prettier-ignore -->
+{% extends "dashboard/base_admin.html" %} 
+{% block title %}Activity Logs
+{%endblock %} 
 {% block content %}
 <h3>Activity Logs</h3>
 
 <style>
-.export-csv-btn {
-  background: #38b2ac;
-  color: #fff;
-  border: none;
-  padding: 8px 18px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-bottom: 12px;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-.export-csv-btn:hover {
-  background: #319795;
-}
-.input-text {
-  padding: 6px 10px;
-  margin: 8px 0;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.row {
-  display: flex;
-  align-items: center;  
-  justify-content: space-between;
-  gap: 16px;
-}
+  .export-csv-btn {
+    background: #38b2ac;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  .export-csv-btn:hover {
+    background: #319795;
+  }
+  .input-text {
+    padding: 6px 10px;
+    margin: 8px 0;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .tabs {
+    margin-top: 12px;
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    gap: 12px;
+  }
+  .tab-button {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    border-bottom: 3px solid transparent;
+    color: #4a5568;
+    transition: border-color 0.3s, color 0.3s;
+  }
+  .tab-button.active {
+    border-color: #2c3e50;
+    color: #2c3e50;
+  }
+  .tab-content {
+    display: none;
+    margin-top: 16px;
+  }
+  .tab-content.active {
+    display: block;
+  }
 </style>
 
 <script>
-function exportTableToCSV(filename) {
+  function exportTableToCSV(filename, tableId) {
     var csv = [];
-    var rows = document.querySelectorAll("table.data-table tr");
+    var rows = document.querySelectorAll("#" + tableId + " tr");
     for (var i = 0; i < rows.length; i++) {
-        var row = [], cols = rows[i].querySelectorAll("td, th");
-        for (var j = 0; j < cols.length; j++)
-            row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
-        csv.push(row.join(","));
+      var row = [],
+        cols = rows[i].querySelectorAll("td, th");
+      for (var j = 0; j < cols.length; j++)
+        row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+      csv.push(row.join(","));
     }
     // Download CSV
     var csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
@@ -57,102 +84,240 @@ function exportTableToCSV(filename) {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
-}
+  }
 
-// Search filter function
-function filterTable() {
+  // Search filter function for active tab
+  function filterTable() {
     var input = document.getElementById("searchInput");
     var filter = input.value.toLowerCase();
-    var table = document.getElementById("staffUsersTable");
+    var activeTab = document.querySelector(".tab-content.active");
+    if (!activeTab) return;
+    var table = activeTab.querySelector("table");
+    if (!table) return;
     var tr = table.getElementsByTagName("tr");
 
-    for (var i = 1; i < tr.length; i++) { // start at 1 to skip header row
-        var tdUsername = tr[i].getElementsByTagName("td")[0];
-        var tdRole = tr[i].getElementsByTagName("td")[1];
-        if (tdUsername && tdRole) {
-            var usernameText = tdUsername.textContent || tdUsername.innerText;
-            var roleText = tdRole.textContent || tdRole.innerText;
-            if (usernameText.toLowerCase().indexOf(filter) > -1 || roleText.toLowerCase().indexOf(filter) > -1) {
-                tr[i].style.display = "";
-            } else {
-                tr[i].style.display = "none";
-            }
+    for (var i = 1; i < tr.length; i++) {
+      // start at 1 to skip header row
+      var tdUsername = tr[i].getElementsByTagName("td")[0];
+      var tdRole = tr[i].getElementsByTagName("td")[1];
+      if (tdUsername && tdRole) {
+        var usernameText = tdUsername.textContent || tdUsername.innerText;
+        var roleText = tdRole.textContent || tdRole.innerText;
+        if (
+          usernameText.toLowerCase().indexOf(filter) > -1 ||
+          roleText.toLowerCase().indexOf(filter) > -1
+        ) {
+          tr[i].style.display = "";
+        } else {
+          tr[i].style.display = "none";
         }
+      }
     }
-}
+  }
+
+  function showTab(tabName) {
+    const tabs = document.querySelectorAll(".tab-content");
+    const buttons = document.querySelectorAll(".tab-button");
+
+    tabs.forEach((tab) => tab.classList.remove("active"));
+    buttons.forEach((btn) => btn.classList.remove("active"));
+
+    document.getElementById(tabName).classList.add("active");
+    document
+      .querySelector('.tab-button[data-tab="' + tabName + '"]')
+      .classList.add("active");
+
+    // Clear search input on tab change
+    document.getElementById("searchInput").value = "";
+    filterTable();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    showTab("staffLogs"); // Default to staffLogs tab
+  });
 </script>
 
-
 <div class="column">
-  <div class="row">
-    <label for="searchInput">Search by Username or Action:</label> 
-<input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search users..." class="input-text" />
-<button class="export-csv-btn" onclick="exportTableToCSV('staff_users.csv')">Export CSV</button>
+  <div>
+    <label for="searchInput">Search by Username or Action:</label>
+    <input
+      type="text"
+      id="searchInput"
+      onkeyup="filterTable()"
+      placeholder="Search users..."
+      class="input-text"
+    />
   </div>
-<div>
-  Staff Users Table 
-  <table id= "staffUsersTable" class="data-table">
-  <thead>
-    <tr>
-      <th>User</th>
-      <th>Action</th>
-      <th>Model</th>
-      <th>IP Address / Action</th>
-      <th>Timestamp</th>
-    </tr>
-  </thead>
-<tbody>
-  {% for log in logs %}
-  <tr>
-    <td>
-      {% if log.user %}
-        {{ log.user.username }}
-      {% else %}
-        System
-      {% endif %}
-    </td>
-    <td>
-      {% if log.log_type == 'logentry' %}
-        {% if log.action_flag == 1 %}Added{% elif log.action_flag == 2 %}Changed{% elif log.action_flag == 3 %}Deleted{% else %}Unknown{% endif %}
-      {% elif log.log_type == 'authlog' %}
-        {{ log.action|title }}
-      {% else %}
-        Unknown
-      {% endif %}
-    </td>
-    <td>
-      {% if log.log_type == 'logentry' %}
-        {{ log.content_type.app_label }}.{{ log.content_type.model }}
-      {% elif log.log_type == 'authlog' %}
-        Authentication
-      {% else %}
-        -
-      {% endif %}
-    </td>
-    <td>
-      {% if log.log_type == 'logentry' %}
-        {{ log.object_repr }}
-      {% elif log.log_type == 'authlog' %}
-        IP: {{ log.ip_address }}
-      {% else %}
-        -
-      {% endif %}
-    </td>
-    <td>
-      {% if log.log_type == 'logentry' %}
-        {{ log.action_time }}
-      {% elif log.log_type == 'authlog' %}
-        {{ log.timestamp }}
-      {% else %}
-        -
-      {% endif %}
-    </td>
-  </tr>
-  {% empty %}
-  <tr><td colspan="5">No activity logs found.</td></tr>
-  {% endfor %}
-</tbody>
-</table>
+
+  <div class="tabs">
+    <div
+      class="tab-button active"
+      data-tab="staffLogs"
+      onclick="showTab('staffLogs')"
+    >
+      Staff
+    </div>
+    <div
+      class="tab-button"
+      data-tab="clientLogs"
+      onclick="showTab('clientLogs')"
+    >
+      Clients
+    </div>
+  </div>
+
+  <div id="staffLogs" class="tab-content active">
+    <button
+      class="export-csv-btn"
+      onclick="exportTableToCSV('staff_logs.csv', 'staffLogsTable')"
+    >
+      Export Staff CSV
+    </button>
+    <table id="staffLogsTable" class="data-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Action</th>
+          <th>Model</th>
+          <th>IP Address / Action</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in staff_logs %}
+        <tr>
+          <td>
+            {% if log.user %} {{ log.user.username }} {% else %} System {% endif %}
+          </td>
+          <td>
+            {% if log.log_type == 'logentry' %}
+              {% if log.action_flag == 1 %}
+                Added
+              {% elif log.action_flag == 2 %}
+                Changed
+              {% elif log.action_flag == 3 %}
+                Deleted
+              {% else %}
+                Unknown
+              {% endif %}
+            {% elif log.log_type == 'authlog' %}
+              {{ log.action|title }}
+            {% endif %}
+          </td>
+          <td>
+            {% if log.log_type == 'logentry' %}
+              {{ log.content_type.app_label }}.{{ log.content_type.model }}
+            {% elif log.log_type == 'authlog' %}
+              Authentication
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if log.log_type == 'logentry' %}
+              {{ log.object_repr }}
+            {% elif log.log_type == 'authlog' %}
+              IP: {{ log.ip_address }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if log.log_type == 'logentry' %}
+              {{ log.action_time }}
+            {% elif log.log_type == 'authlog' %}
+              {{ log.timestamp }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">No staff activity logs found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div id="clientLogs" class="tab-content">
+    <button
+      class="export-csv-btn"
+      onclick="exportTableToCSV('client_logs.csv', 'clientLogsTable')"
+    >
+      Export Client CSV
+    </button>
+    <table id="clientLogsTable" class="data-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Action</th>
+          <th>Model</th>
+          <th>IP Address / Action</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in client_logs %}
+        <tr>
+          <td>
+            {% if log.user %}
+              {{ log.user.username }}
+            {% else %}
+              System
+            {% endif %}
+          </td>
+          <td>
+            {% if log.log_type == 'logentry' %}
+              {% if log.action_flag == 1 %}
+                Added
+              {% elif log.action_flag == 2 %}
+                Changed
+              {% elif log.action_flag == 3 %}
+                Deleted
+              {% else %}
+                Unknown
+              {% endif %}
+            {% elif log.log_type == 'authlog' %}
+              {{ log.action|title }}
+            {% endif %}
+          </td>
+          <td>
+            {% if log.log_type == 'logentry' %}
+              {{ log.content_type.app_label }}.{{ log.content_type.model }}
+            {% elif log.log_type == 'authlog' %}
+              Authentication
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if log.log_type == 'logentry' %}
+              {{ log.object_repr }}
+            {% elif log.log_type == 'authlog' %}
+              IP: {{ log.ip_address }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if log.log_type == 'logentry' %}
+              {{ log.action_time }}
+            {% elif log.log_type == 'authlog' %}
+              {{ log.timestamp }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">No client activity logs found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
-</div>
-{% endblock %}
+{% endblock %}}

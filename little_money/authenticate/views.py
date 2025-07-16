@@ -16,7 +16,7 @@ def user_login(request):
             if user.role == 'admin':
                 return redirect('admins:admin_dashboard')
             elif user.role == 'staff':
-                return redirect('staff:staff_dashboard')
+                return redirect('staff:summary_dashboard')
             elif user.role == 'client':
                 return redirect('client:overview_dashboard')
             else:
