@@ -2,6 +2,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 
+def index(request):
+    return render(request, 'index.html')
+
 def user_login(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -22,4 +25,10 @@ def user_login(request):
         else:
             messages.error(request, "Invalid credentials.")
     return render(request, 'login.html')
+
+
+# Logout View
+def user_logout(request):
+    logout(request)
+    return redirect('authenticate:login')
 
