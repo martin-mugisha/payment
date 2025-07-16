@@ -3,7 +3,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Staff Login</title>
+    <title>Login</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -79,7 +79,7 @@
   <body>
     <main>
       <form method="post" class="login-form">
-        <h2>Staff Login</h2>
+        <h2>Login</h2>
         {% if messages %} {% for message in messages %}
         <p class="message">{{ message }}</p>
         {% endfor %} {% endif %} {% csrf_token %}
