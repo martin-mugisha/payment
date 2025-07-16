@@ -30,5 +30,5 @@ def user_login(request):
 # Logout View
 def user_logout(request):
     logout(request)
-    return redirect('authenticate:login')
+    return redirect('https://auth.mangupay.tech/login/')
 
