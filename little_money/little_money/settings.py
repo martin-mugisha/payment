@@ -79,7 +79,7 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'core.CustomUser'
-STATIC_URL = 'https://mangupay.tech/static/'
+STATIC_URL = '/static/'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.example.com')
 EMAIL_PORT = os.getenv('EMAIL_PORT', 587)
@@ -120,11 +120,6 @@ DATABASES = {
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
-
-CSRF_COOKIE_DOMAIN = ".mangupay.tech"
-SESSION_COOKIE_DOMAIN = ".mangupay.tech"
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
 
 
 # Password validation
