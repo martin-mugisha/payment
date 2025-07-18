@@ -1,0 +1,66 @@
+{% extends "dashboard/base_admin.html" %}
+{% block title %}Finance Dashboard{% endblock %}
+{% block content %}
+<h3>Finance Dashboard</h3>
+
+<div class="tab-buttons">
+  <button id="revenue-balance-btn" onclick="showTab('revenue-balance')" class="active">Platform Revenue & Balance</button>
+  <button id="my-balance-btn" onclick="showTab('my-balance')">My Balance</button>
+</div>
+
+<div id="revenue-balance" class="tab-content active">
+  <h4>Platform Revenue Details and Balance</h4>
+  <p>Mock data for platform revenue and balance will be shown here.</p>
+</div>
+
+<div id="my-balance" class="tab-content">
+  <h4>My Balance</h4>
+  <p>Mock data for my balance will be shown here.</p>
+</div>
+
+<style>
+.tab-buttons {
+  display: flex;
+  border-bottom: 2px solid #e2e8f0;
+  margin-top: 20px;
+}
+.tab-buttons button {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #4a5568;
+  transition: border-color 0.3s, color 0.3s;
+  border-bottom: 3px solid transparent;
+}
+.tab-buttons button.active {
+  border-color: #2c3e50;
+  color: #2c3e50;
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
+</style>
+
+<script>
+function showTab(tabName) {
+  const tabs = document.querySelectorAll('.tab-content');
+  const buttons = document.querySelectorAll('.tab-buttons button');
+
+  tabs.forEach(tab => tab.classList.remove('active'));
+  buttons.forEach(btn => btn.classList.remove('active'));
+
+  document.getElementById(tabName).classList.add('active');
+  document.getElementById(tabName + '-btn').classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  showTab('revenue-balance'); // Default to 'revenue-balance' tab
+});
+</script>
+
+{% endblock %}

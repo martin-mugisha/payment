@@ -8,6 +8,8 @@ from finance.models import PlatformSettings
 from django.db.models.functions import TruncDate
 from django.contrib.admin.models import LogEntry, CHANGE, ADDITION, DELETION
 from django.db.models import Sum
+from finance.models import PlatformSettings, PlatformFeeHistory
+from staff.models import StaffCommissionHistory
 import json
 from django.contrib import messages
 from core.utils import is_admin
@@ -36,10 +38,20 @@ def admin_dashboard(request):
         'chart_data': json.dumps(chart_data),
     })
 
-# Platform Fee Settings
-from finance.models import PlatformSettings, PlatformFeeHistory
-from staff.models import StaffCommissionHistory
-from admins.models import AdminCommissionHistory
+@login_required
+@user_passes_test(is_admin)
+def finance_dashboard(request):
+    # Mock data for demonstration
+    platform_revenue = 123456.78
+    platform_balance = 98765.43
+    my_balance = 5432.10
+
+    context = {
+        'platform_revenue': platform_revenue,
+        'platform_balance': platform_balance,
+        'my_balance': my_balance,
+    }
+    return render(request, 'dashboard/finance.html', context)
 
 @login_required
 @user_passes_test(is_admin)
@@ -47,7 +59,6 @@ def platform_settings(request):
     settings_obj = PlatformSettings.objects.first()
     platform_fee_history = PlatformFeeHistory.objects.all().order_by('-created_at')
     staff_commission_history = StaffCommissionHistory.objects.all().order_by('-created_at')
-    admin_commission_history = AdminCommissionHistory.objects.all().order_by('-created_at')
 
     if request.method == 'POST':
         if 'platform_fee_percent' in request.POST:
@@ -63,16 +74,11 @@ def platform_settings(request):
             new_commission = float(request.POST['staff_commission_percent'])
             StaffCommissionHistory.objects.create(percentage=new_commission)
             messages.success(request, f"Staff commission updated to {new_commission}%")
-        elif 'admin_commission_percent' in request.POST:
-            new_admin_commission = float(request.POST['admin_commission_percent'])
-            AdminCommissionHistory.objects.create(percentage=new_admin_commission)
-            messages.success(request, f"Admin commission updated to {new_admin_commission}%")
 
     return render(request, 'dashboard/platform_settings.html', {
         'settings': settings_obj,
         'platform_fee_history': platform_fee_history,
         'staff_commission_history': staff_commission_history,
-        'admin_commission_history': admin_commission_history,
     })
 
 

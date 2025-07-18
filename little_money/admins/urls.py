@@ -11,7 +11,8 @@ from .views import (
     profile_view,
     platform_settings,
     staff_user_delete,  
-    activity_logs
+    activity_logs,
+    finance_dashboard,
 )
 
 app_name = 'admins'
@@ -28,5 +29,6 @@ urlpatterns=[
     path('activity-logs/', activity_logs, name='activity_logs'),
     path('profile/', profile_view, name='profile'),
     path('platform-settings/', platform_settings, name='platform_settings'),
+    path('finance/', finance_dashboard, name='finance_dashboard'),
     path('delete-staff-user/<int:user_id>/', staff_user_delete, name='delete_staff_user'),  # New URL pattern
 ]
