@@ -71,10 +71,12 @@ def summary_dashboard(request):
 @login_required
 @user_passes_test(is_staff)
 def balance(request):
-    current_balance = 1234500
+    staff_user, created = Staff.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+    balance_obj = Balance.objects.filter(staff=staff_user).first()
+    current_balance = balance_obj.balance if balance_obj else 0.00
+    last_updated = balance_obj.last_updated if balance_obj else None
     account_number = '078456789'
     account_type = 'MTN Mobile Money'
-    last_updated = '2024-06-01'
     withdraw_history = [
         {'name': 'John Doe', 'number': '0784567890', 'network': 'MTN', 'amount': 100000.00, 'date': '2024-05-25'},
         {'name': 'Jane Smith', 'number': '0757654321', 'network': 'Airtel', 'amount': 50000.00, 'date': '2024-05-28'},
