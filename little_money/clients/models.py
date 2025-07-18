@@ -1,9 +1,12 @@
 from core.models import CustomUser
 from django.db import models
+from django.core.validators import MinValueValidator
 
 class Client(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='clients')
     name = models.CharField(max_length=255)
+    business_type = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -13,10 +16,20 @@ class Client(models.Model):
     class Meta:
         verbose_name_plural = "Clients"
         ordering = ['name']
+    
+    @property
+    def balance(self):
+        finance = self.finances.first()
+        return finance.balance if finance else 0.00
 
 class Finances(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='finances')
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    balance = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=0.00,
+        validators=[MinValueValidator(0.00)]
+    )
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):

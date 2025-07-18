@@ -6,63 +6,88 @@ from core.utils import is_client
 import openpyxl
 from django.contrib import messages
 from django.shortcuts import redirect
-from core.utils import format_phone_number
+from django.utils.timezone import localdate
+import datetime
+from collections import defaultdict
+from django.db.models import Sum
+from calendar import monthrange
+
+
+def is_all_zero(data):
+    """Check if all values in the data list are zero."""
+    return all(float(x) == 0 for x in data)
 
 @login_required
 @user_passes_test(is_client)
 def overview_dashboard(request):
-    import datetime
-    from django.utils.timezone import localdate
-    from django.db.models import Sum
-
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
     finances = Finances.objects.filter(client=client).first()
 
-    # Get current day of week (0=Monday, 6=Sunday)
     today = localdate()
-    # Adjust so Sunday=0, Monday=1,... Saturday=6
-    current_weekday = (today.weekday() + 1) % 7
+    current_weekday = (today.weekday() + 1) % 7  # Sunday = 0
 
-    # Prepare payments_week data
+    # ------------------ WEEKLY PAYMENTS -------------------
     week_labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    week_start = today - datetime.timedelta(days=current_weekday)
     payments_week_data = []
+
     for i in range(7):
-        # Calculate day_date with Sunday as first day
-        day_date = today - datetime.timedelta(days=(current_weekday - i) % 7)
-        if i <= current_weekday:
-            total = DailyPayment.objects.filter(client=client, date=day_date).aggregate(total=Sum('amount'))['total'] or 0
-            payments_week_data.append(total)
+        day_date = week_start + datetime.timedelta(days=i)
+        if day_date <= today:
+            total = DailyPayment.objects.filter(client=client, date=day_date)\
+                .aggregate(total=Sum('amount'))['total'] or 0
+            payments_week_data.append(float(total))
         else:
-            payments_week_data.append(0)  # Future days show 0
+            payments_week_data.append(0.0)
 
     payments_week = {
         'labels': week_labels,
-        'data': payments_week_data,
+        'data': payments_week_data if not is_all_zero(payments_week_data) else [],
     }
 
-    # Prepare payments_month data (4 weeks)
-    # Determine current week of the month (1-4)
+    # ------------------ MONTHLY PAYMENTS -------------------
     first_day_of_month = today.replace(day=1)
-    current_week_of_month = (today.day - 1) // 7 + 1
+    last_day_of_month = today.replace(day=monthrange(today.year, today.month)[1])
+
+    # Find the first Sunday on or before the 1st of the month
+    start_of_calendar = first_day_of_month - datetime.timedelta(days=(first_day_of_month.weekday() + 1) % 7)
+
+    # Create a map of daily totals in the month
+    all_payments = DailyPayment.objects.filter(
+        client=client,
+        date__range=(start_of_calendar, last_day_of_month)
+    ).values('date').annotate(total=Sum('amount'))
+
+    day_totals_map = {entry['date']: float(entry['total']) for entry in all_payments}
+
+    # Iterate Sunday to Saturday in week blocks
     payments_month_data = []
-    for week_num in range(1, 5):
-        if week_num <= current_week_of_month:
-            start_day = first_day_of_month + datetime.timedelta(days=(week_num - 1) * 7)
-            end_day = start_day + datetime.timedelta(days=6)
-            total = DailyPayment.objects.filter(client=client, date__range=(start_day, end_day)).aggregate(total=Sum('amount'))['total'] or 0
-            payments_month_data.append(total)
-        else:
-            payments_month_data.append(0)  # Future weeks show 0
+    labels = []
+    current = start_of_calendar
+    week_index = 1
+
+    while current <= today:
+        week_total = 0.0
+        for i in range(7):
+            day = current + datetime.timedelta(days=i)
+            if day > today:
+                continue  # future days are 0
+            week_total += day_totals_map.get(day, 0.0)
+        payments_month_data.append(week_total)
+        labels.append(f"Week {week_index}")
+        week_index += 1
+        current += datetime.timedelta(days=7)
 
     payments_month = {
-        'labels': ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-        'data': payments_month_data,
+        'labels': labels,
+        'data': payments_month_data if not is_all_zero(payments_month_data) else [],
     }
 
+    # ------------------ OTHER CONTEXT -------------------
     recent_transactions = RecentTransaction.objects.filter(client=client).order_by('-date')[:5]
     upcoming_payments = UpcomingPayment.objects.filter(client=client).order_by('date')[:5]
     linked_accounts = LinkedAccount.objects.filter(client=client)
-    user_settings = None
+
     try:
         user_settings = client.user_settings
     except UserSetting.DoesNotExist:
@@ -115,26 +140,40 @@ def payments(request):
             elif transaction_type not in ['collection', 'disbursement']:
                 messages.error(request, 'Invalid transaction type selected.')
             else:
-                # Record the payment in DailyPayment and RecentTransaction
+                from decimal import Decimal
                 client_obj, _ = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+                finances, created = Finances.objects.get_or_create(client=client_obj, defaults={'balance': Decimal('0.00')})
+                amount_decimal = Decimal(amount)
+
+                # Validation for disbursement amount <= balance
+                if transaction_type == 'disbursement' and amount_decimal > finances.balance:
+                    messages.error(request, f'Disbursement amount {amount} exceeds available balance {finances.balance}. Transaction cancelled.')
+                    return redirect('client:payments')
+
+                # Record the payment in DailyPayment and RecentTransaction
                 DailyPayment.objects.create(
                     client=client_obj,
                     date=now().date(),
-                    amount=Decimal(amount),
+                    amount=amount_decimal if transaction_type == 'collection' else -amount_decimal,
                 )
                 RecentTransaction.objects.create(
                     client=client_obj,
                     date=now().date(),
-                    amount=Decimal(amount),
+                    amount=amount_decimal,
                     recipient=name,
                     phone=phone,
                 )
                 # Update or create Finances balance accordingly
-                finances, created = Finances.objects.get_or_create(client=client_obj, defaults={'balance': Decimal('0.00')})
                 if transaction_type == 'collection':
-                    finances.balance += Decimal(amount)
+                    finances.balance += amount_decimal
                 else:
-                    finances.balance -= Decimal(amount)
+                    finances.balance -= amount_decimal
+
+                # Ensure balance never goes below 0
+                if finances.balance < 0:
+                    messages.error(request, 'Balance cannot go below zero. Transaction cancelled.')
+                    return redirect('client:payments')
+
                 finances.save()
 
                 messages.success(request, f'Single payment of {amount} to {name} ({phone}) via {payment_method} as {transaction_type} processed.')
@@ -161,25 +200,52 @@ def payments(request):
                 payments_processed = 0
                 client_obj, _ = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
                 for row in sheet.iter_rows(min_row=2, values_only=True):
-                    name, phone, amount, payment_method = row
+                    # Expecting row to have name, phone, amount, payment_method, optionally transaction_type
+                    if len(row) == 4:
+                        name, phone, amount, payment_method = row
+                        transaction_type = 'collection'  # default if not provided
+                    elif len(row) >= 5:
+                        name, phone, amount, payment_method, transaction_type = row
+                        if transaction_type not in ['collection', 'disbursement']:
+                            transaction_type = 'collection'  # fallback default
+                    else:
+                        continue  # skip rows that don't have enough columns
+
                     if payment_method not in ['MTN', 'Airtel']:
                         continue  # skip invalid payment methods
+
+                    from decimal import Decimal
+                    amount_decimal = Decimal(amount)
+                    finances, created = Finances.objects.get_or_create(client=client_obj, defaults={'balance': Decimal('0.00')})
+
+                    # Validation for disbursement amount <= balance
+                    if transaction_type == 'disbursement' and amount_decimal > finances.balance:
+                        continue  # skip this payment
+
                     # Record each payment in DailyPayment and RecentTransaction
                     DailyPayment.objects.create(
                         client=client_obj,
                         date=now().date(),
-                        amount=Decimal(amount),
+                        amount=amount_decimal if transaction_type == 'collection' else -amount_decimal,
                     )
                     RecentTransaction.objects.create(
                         client=client_obj,
                         date=now().date(),
-                        amount=Decimal(amount),
+                        amount=amount_decimal,
                         recipient=name,
                         phone=phone,
                     )
                     # Update or create Finances balance
-                    finances, created = Finances.objects.get_or_create(client=client_obj, defaults={'balance': Decimal('0.00')})
-                    finances.balance += Decimal(amount)
+                    if transaction_type == 'collection':
+                        finances.balance += amount_decimal
+                    else:
+                        finances.balance -= amount_decimal
+
+                    # Ensure balance never goes below 0
+                    if finances.balance < 0:
+                        # Rollback this payment by skipping save and continue
+                        continue
+
                     finances.save()
 
                     payments_processed += 1
@@ -218,17 +284,33 @@ def accounts(request):
             messages.error(request, 'Invalid transaction type selected.')
         else:
             from decimal import Decimal
+            amount_decimal = Decimal(amount)
+            finances, created = Finances.objects.get_or_create(client=client, defaults={'balance': Decimal('0.00')})
+
+            # Validation for disbursement amount <= balance
+            if transaction_type == 'disbursement' and amount_decimal > finances.balance:
+                messages.error(request, f'Disbursement amount {amount} exceeds available balance {finances.balance}. Transaction cancelled.')
+                return redirect('client:accounts')
+
             # Record the fund addition as a RecentTransaction with transaction_type 'collection'
             RecentTransaction.objects.create(
                 client=client,
                 date=now().date(),
-                amount=Decimal(amount),
+                amount=amount_decimal,
                 recipient=name,
                 phone=phone,
             )
             # Update or create Finances balance
-            finances, created = Finances.objects.get_or_create(client=client, defaults={'balance': Decimal('0.00')})
-            finances.balance += Decimal(amount)
+            if transaction_type == 'collection':
+                finances.balance += amount_decimal
+            else:
+                finances.balance -= amount_decimal
+
+            # Ensure balance never goes below 0
+            if finances.balance < 0:
+                messages.error(request, 'Balance cannot go below zero. Transaction cancelled.')
+                return redirect('client:accounts')
+
             finances.save()
 
             messages.success(request, f'Funds of {amount} added for {name} ({phone}) via {payment_method}.')

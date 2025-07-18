@@ -1,7 +1,11 @@
+from decimal import Decimal
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.db.models.functions import TruncWeek, TruncMonth, TruncDate
-from .models import Withdrawal
+from django.shortcuts import render
+from django.db.models import Sum, Exists, OuterRef
+from clients.models import Client, RecentTransaction
+from .models import Earnings, Staff, Transaction, Balance
 from django.db.models import Sum
 import csv
 from django.http import HttpResponse
@@ -9,37 +13,63 @@ from core.utils import is_staff
 
 # Profile View
 @login_required
+@user_passes_test(is_staff)
 def profile_view(request):
     return render(request, 'dashboard/admin/profile.html', {'user': request.user})
 
 @login_required
+@user_passes_test(is_staff)
 def summary_dashboard(request):
-    # Sample data for charts
-    weekly_labels = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7']
-    weekly_data = [100000, 150000, 70000, 120000, 200000, 180000, 250000]
+    staff_user, created = Staff.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+    assigned_clients = Client.objects.filter(assigned_staff__staff=staff_user).distinct()
+    transactions = Transaction.objects.all()
+    balance = Balance.objects.filter(staff=staff_user).first()
 
-    monthly_labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
-    monthly_data = [5000000, 6000000, 5500000, 7000000]
+    # Weekly earnings
+    weekly_qs = Earnings.objects.filter(staff=staff_user, type='weekly').order_by('day_or_week')
+    weekly_labels = [e.day_or_week for e in weekly_qs]
+    weekly_data = [float(e.amount) for e in weekly_qs]
 
-    balance = 1234500
-    transactions_count = 150
-    active_clients = 38
-    earnings = 3000000
+    # Monthly earnings
+    monthly_qs = Earnings.objects.filter(staff=staff_user, type='monthly').order_by('day_or_week')
+    monthly_labels = [e.day_or_week for e in monthly_qs]
+    monthly_data = [float(e.amount) for e in monthly_qs]
+
+    # Highest earnings (top 10)
+    highest_qs = Earnings.objects.filter(staff=staff_user, type='highest').order_by('-amount')[:10]
+    highest_labels = [e.day_or_week for e in highest_qs]
+    highest_data = [float(e.amount) for e in highest_qs]
+
+    # Lowest earnings (bottom 10)
+    lowest_qs = Earnings.objects.filter(staff=staff_user, type='lowest').order_by('amount')[:10]
+    lowest_labels = [e.day_or_week for e in lowest_qs]
+    lowest_data = [float(e.amount) for e in lowest_qs]
+
+    # Additional KPIs
+    current_balance = balance.balance if balance else 0.00
+    transactions_count = transactions.count()
+    active_clients = assigned_clients.filter(recent_transactions__isnull=False).distinct().count()
+    monthly_total = sum(monthly_data) if monthly_data else 0
 
     context = {
         'weekly_labels': weekly_labels,
         'weekly_data': weekly_data,
         'monthly_labels': monthly_labels,
         'monthly_data': monthly_data,
-        'current_balance': balance,
+        'highest_earning_labels': highest_labels,
+        'highest_earning_data': highest_data,
+        'lowest_earning_labels': lowest_labels,
+        'lowest_earning_data': lowest_data,
+        'current_balance': current_balance,
         'transactions': transactions_count,
         'active_clients': active_clients,
-        'monthly_total': earnings,
-
+        'monthly_total': monthly_total,
     }
     return render(request, 'dashboard/summary_dashboard.html', context)
 
+
 @login_required
+@user_passes_test(is_staff)
 def balance(request):
     current_balance = 1234500
     account_number = '078456789'
@@ -59,46 +89,51 @@ def balance(request):
     return render(request, 'dashboard/balance.html', context)
 
 @login_required
+@user_passes_test(is_staff)
 def transactions(request):
-    transactions_list = [
-        {'name': 'John Doe', 'number': '07844567890', 'network': 'MTN', 'status': 'Completed', 'reason': 'Payment', 'amount': 1000000.00},
-        {'name': 'Jane Smith', 'number': '0757654321', 'network': 'Airtel', 'status': 'Pending', 'reason': 'Refund', 'amount': 500000.00},
-        {'name': 'Bob Johnson', 'number': '0772334455', 'network': 'MTN', 'status': 'Failed', 'reason': 'Chargeback', 'amount': 750000.00},
-    ]
+    transactions_list = Transaction.objects.all()
+
     context = {
         'transactions': transactions_list,
     }
     return render(request, 'dashboard/transaction.html', context)
 
 @login_required
+@user_passes_test(is_staff)
 def my_earning(request):
+    # Filter earnings by type
+    weekly_earnings_qs = Earnings.objects.filter(type='weekly')
+    monthly_earnings_qs = Earnings.objects.filter(type='monthly')
+    highest_earnings_qs = Earnings.objects.filter(type='highest')
+    lowest_earnings_qs = Earnings.objects.filter(type='lowest')
+
+    # Prepare data for the template
     weekly_earnings = [
-        {'day': 'Monday', 'amount': 150000.00},
-        {'day': 'Tuesday', 'amount': 180000.00},
-        {'day': 'Wednesday', 'amount': 200000.00},
-        {'day': 'Thursday', 'amount': 170000.00},
-        {'day': 'Friday', 'amount': 220000.00},
-        {'day': 'Saturday', 'amount': 130000.00},
-        {'day': 'Sunday', 'amount': 150000.00},
+        {'day': e.day_or_week, 'amount': e.amount} for e in weekly_earnings_qs
     ]
-    weekly_total = sum(item['amount'] for item in weekly_earnings)
+    weekly_total = sum(e.amount for e in weekly_earnings_qs)
 
     monthly_earnings = [
-        {'week': 'Week 1', 'amount': 3000000.00},
-        {'week': 'Week 2', 'amount': 3500000.00},
-        {'week': 'Week 3', 'amount': 2800000.00},
-        {'week': 'Week 4', 'amount': 2700000.00},
+        {'week': e.day_or_week, 'amount': e.amount} for e in monthly_earnings_qs
     ]
-    monthly_total = sum(item['amount'] for item in monthly_earnings)
+    monthly_total = sum(e.amount for e in monthly_earnings_qs)
 
     highest_earnings = [
-        {'user': 'Arme Corp', 'amount': 500000.00, 'date': '2024-05-20'},
-        {'user': 'Simple Loans', 'amount': 450000.00, 'date': '2024-05-18'},
+        {
+            'user': e.staff.__str__() if e.staff else 'Unknown', 
+            'amount': e.amount, 
+            'date': e.date.strftime('%Y-%m-%d') if e.date else ''
+        } 
+        for e in highest_earnings_qs
     ]
 
     lowest_earnings = [
-        {'user': 'Bob Johnson', 'amount': 20000.00, 'date': '2024-05-22'},
-        {'user': 'Alice Namara', 'amount': 25000.00, 'date': '2024-05-19'},
+        {
+            'user': e.staff.__str__() if e.staff else 'Unknown', 
+            'amount': e.amount, 
+            'date': e.date.strftime('%Y-%m-%d') if e.date else ''
+        } 
+        for e in lowest_earnings_qs
     ]
 
     context = {
@@ -112,16 +147,28 @@ def my_earning(request):
     return render(request, 'dashboard/my_earning.html', context)
 
 @login_required
+@user_passes_test(is_staff)
 def clients(request):
-    total_clients = 45
-    active_clients = 38
-    inactive_clients = 7
-    
-    clients_list = [
-        {'name': 'Acme Corp', 'business_type': 'Retail', 'id': '001', 'status': 'Active', 'balance': 12345000.67},
-        {'name': 'Beta LLC', 'business_type': 'Wholesale', 'id': '002', 'status': 'Inactive', 'balance': 8765000.43},
-    ]
-    total_balance = sum(client['balance'] for client in clients_list)
+    staff_user, created = Staff.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+
+    assigned_clients = Client.objects.filter(assigned_staff__staff=staff_user).distinct()
+
+    total_clients = assigned_clients.count()
+    active_clients = assigned_clients.filter(recent_transactions__isnull=False).distinct().count()
+    inactive_clients = assigned_clients.filter(recent_transactions__isnull=True).distinct().count()
+
+    # Compute total balance manually from finance
+    total_balance = sum((Decimal(str(client.balance)) for client in assigned_clients), Decimal(0))
+
+    # Build client data list manually since balance is a property
+    clients_list = [{
+        'id': client.id,
+        'name': client.name,
+        'business_type': client.business_type,
+        'status': client.status,
+        'balance': client.balance,
+    } for client in assigned_clients]
+
     context = {
         'total_clients': total_clients,
         'active_clients': active_clients,
@@ -129,4 +176,6 @@ def clients(request):
         'total_balance': total_balance,
         'clients': clients_list,
     }
+
     return render(request, 'dashboard/clients.html', context)
+

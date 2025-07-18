@@ -2,7 +2,7 @@
 {% block title %}Overview{% endblock %}
 
 {% block content %}
-<h2>Overview / Dashboard</h2>
+<h2>Summary</h2>
 
 <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px;">
   <div class="kpi-card">
@@ -29,7 +29,7 @@
   </div>
 
   <div class="kpi-card">
-    <h3>Quick Links to Payment Methods</h3>
+    <h3>Accepted Payment Methods</h3>
     <ul>
       {% for method in payment_methods %}
       <li>{{ method }}</li>
@@ -42,53 +42,70 @@
 <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px;">
   <div style="flex: 1; min-width: 300px; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">
     <h3>Payments This Week</h3>
-    <canvas id="paymentsWeekChart"></canvas>
+    {% if payments_week.data|length == 0 %}
+      <p>No payment data available for this week.</p>
+    {% else %}
+      <canvas id="paymentsWeekChart"></canvas>
+    {% endif %}
   </div>
   <div style="flex: 1; min-width: 300px; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">
     <h3>Payments This Month</h3>
-    <canvas id="paymentsMonthChart"></canvas>
+    {% if payments_month.data|length == 0 %}
+      <p>No payment data available for this month.</p>
+    {% else %}
+      <canvas id="paymentsMonthChart"></canvas>
+    {% endif %}
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const paymentsWeekCtx = document.getElementById('paymentsWeekChart').getContext('2d');
-  const paymentsMonthCtx = document.getElementById('paymentsMonthChart').getContext('2d');
-
-  const paymentsWeekChart = new Chart(paymentsWeekCtx, {
-    type: 'bar',
-    data: {
-      labels: {{ payments_week.labels|safe }},
-      datasets: [{
-        label: 'Payments This Week',
-        data: {{ payments_week.data|safe }},
-        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true }
+  const paymentsWeekCanvas = document.getElementById('paymentsWeekChart');
+  if (paymentsWeekCanvas) {
+    const paymentsWeekCtx = paymentsWeekCanvas.getContext('2d');
+    const paymentsWeekChart = new Chart(paymentsWeekCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ payments_week.labels|safe }},
+        datasets: [{
+          label: 'Payments This Week',
+          data: {{ payments_week.data|safe }},
+          backgroundColor: 'rgba(54, 162, 235, 0.6)'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        }
       }
-    }
-  });
+    });
+  }
 
-  const paymentsMonthChart = new Chart(paymentsMonthCtx, {
-    type: 'bar',
-    data: {
-      labels: {{ payments_month.labels|safe }},
-      datasets: [{
-        label: 'Payments This Month',
-        data: {{ payments_month.data|safe }},
-        backgroundColor: 'rgba(255, 99, 132, 0.6)',
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true }
+  const paymentsMonthCanvas = document.getElementById('paymentsMonthChart');
+  if (paymentsMonthCanvas) {
+    const paymentsMonthCtx = paymentsMonthCanvas.getContext('2d');
+    const paymentsMonthChart = new Chart(paymentsMonthCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ payments_month.labels|safe }},
+        datasets: [{
+          label: 'Payments This Month',
+          data: {{ payments_month.data|safe }},
+          backgroundColor: 'rgba(255, 99, 132, 0.6)'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        }
       }
-    }
-  });
+    });
+  }
 </script>
 {% endblock %}

@@ -3,7 +3,13 @@
 
 {% block content %}
 <h2>Payments</h2>
-
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
 <div style="display: flex; gap: 20px; flex-wrap: wrap;">
   <div style="flex: 1; min-width: 300px; border: 1px solid #ccc; padding: 20px; border-radius: 8px;">
     <h3>Single Payment</h3>
@@ -45,12 +51,4 @@
     </form>
   </div>
 </div>
-
-{% if messages %}
-  <ul class="messages">
-    {% for message in messages %}
-      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
 {% endblock %}

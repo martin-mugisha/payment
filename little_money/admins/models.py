@@ -13,3 +13,13 @@ class AuthLog(models.Model):
     
     def __str__(self):
         return f"{self.user} - {self.action} - {self.timestamp}"
+
+class AdminCommissionHistory(models.Model):
+    percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Admin Commission {self.percentage}% at {self.created_at}"
+
+    class Meta:
+        ordering = ['-created_at']

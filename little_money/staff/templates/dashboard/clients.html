@@ -1,8 +1,14 @@
-{% extends "dashboard/base_staff.html" %} {% block content %}
+{% extends "dashboard/base_staff.html" %}
+{% load humanize %}
+
+{% block content %}
 <h1>Clients</h1>
-<p>Total Clients: {{ total_clients }}</p>
 
 <div class="kpi-cards">
+  <section class="kpi-card">
+    <h3>Total Clients</h3>
+    <p>{{ total_clients }}</p>
+  </section>
   <section class="kpi-card">
     <h3>Active Clients</h3>
     <p>{{ active_clients }}</p>
@@ -13,10 +19,11 @@
   </section>
   <section class="kpi-card">
     <h3>Total Balance</h3>
-    <p>UGX {{ total_balance }}</p>
+    <p>UGX {{ total_balance|floatformat:2|intcomma }}</p>
   </section>
 </div>
 
+{% if clients %}
 <table class="data-table">
   <thead>
     <tr>
@@ -25,7 +32,6 @@
       <th>ID</th>
       <th>Status</th>
       <th>Balance (UGX)</th>
-      <th>Delete</th>
     </tr>
   </thead>
   <tbody>
@@ -35,27 +41,12 @@
       <td>{{ client.business_type }}</td>
       <td>{{ client.id }}</td>
       <td>{{ client.status }}</td>
-      <td>{{ client.balance }}</td>
-      <td>
-        <form method="post" action="#">
-          <button
-            type="submit"
-            style="
-              background-color: #e3342f;
-              color: #fff;
-              border: none;
-              padding: 6px 16px;
-              border-radius: 4px;
-              cursor: pointer;
-            "
-          >
-            Delete
-          </button>
-        </form>
-      </td>
+      <td>{{ client.balance|floatformat:2|intcomma }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
-
+{% else %}
+<p>No clients assigned to you.</p>
+{% endif %}
 {% endblock %}
