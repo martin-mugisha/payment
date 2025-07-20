@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator
-from clients.models import Client as ClientModel
+from clients.models import Client as ClientModel, RecentTransaction
 from core.models import CustomUser
 
 class Staff(models.Model):
@@ -27,15 +27,27 @@ class Balance(models.Model):
         return f"{self.client.name} - Balance: {self.balance}"
 
 class WithdrawHistory(models.Model):
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, null=True, blank=True)
+    NETWORK_CHOICES = [
+        ('MTN', 'MTN'),
+        ('Airtel', 'Airtel'),
+    ]
+
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'), 
+    ]
+
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='withdrawals')
     name = models.CharField(max_length=255)
-    number = models.CharField(max_length=50)
-    network = models.CharField(max_length=50)
+    number = models.CharField(max_length=20)
+    network = models.CharField(max_length=10, choices=NETWORK_CHOICES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    date_withdrawn = models.DateTimeField()
+    requested_on = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
 
     def __str__(self):
-        return f"WithdrawHistory {self.name} {self.amount} on {self.date_withdrawn}"
+        return f"{self.name} ({self.amount}) - {self.status}"
 
 class ClientAssignment(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='assigned_clients')
@@ -45,28 +57,16 @@ class ClientAssignment(models.Model):
     def __str__(self):
         return f"{self.staff.username} → {self.client.name}"
 
-class Earnings(models.Model):
-    EARNING_TYPE_CHOICES = [
-        ('weekly', 'Weekly'),
-        ('monthly', 'Monthly'),
-        ('highest', 'Highest'),
-        ('lowest', 'Lowest'),
-    ]
-    type = models.CharField(max_length=10, choices=EARNING_TYPE_CHOICES)
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, null=True, blank=True)
-    day_or_week = models.CharField(max_length=50, blank=True, null=True)
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
-    date = models.DateTimeField(blank=True, null=True)
-
-    def __str__(self):
-        return f"Earnings {self.type} - {self.staff or self.day_or_week}: {self.amount}"
-
 class Transaction(models.Model):
+    recent_transaction = models.OneToOneField(
+        RecentTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='linked_transaction'
+    )
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=50)
     reason = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=15, decimal_places=2)
+    created_at = models.DateTimeField(auto_now=True) 
 
     def __str__(self):
         return f"Transaction {self.name} - {self.status} - {self.amount}"

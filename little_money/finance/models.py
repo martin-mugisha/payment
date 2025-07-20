@@ -1,20 +1,13 @@
 from django.db import models
 
+from staff.models import Staff
+
 class SystemEarnings(models.Model):
     total_volume = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_transactions = models.PositiveIntegerField(default=0)
     total_successful_transactions = models.PositiveIntegerField(default=0)
     total_failed_transactions = models.PositiveIntegerField(default=0)
-    total_platform_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    total_clients = models.PositiveIntegerField(default=0)
-    total_clients_with_finances = models.PositiveIntegerField(default=0)
     total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    total_clients_with_positive_balance = models.PositiveIntegerField(default=0)
-    total_clients_with_negative_balance = models.PositiveIntegerField(default=0)
-    total_clients_with_zero_balance = models.PositiveIntegerField(default=0)
-    total_clients_with_finances_updated_today = models.PositiveIntegerField(default=0)
-    total_clients_with_finances_updated_this_week = models.PositiveIntegerField(default=0)
-    total_clients_with_finances_updated_this_month = models.PositiveIntegerField(default=0)
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -49,3 +42,34 @@ class PlatformFeeHistory(models.Model):
     class Meta:
         ordering = ['-created_at']
     
+class MonthlyEarnings(models.Model):
+    year = models.PositiveIntegerField()
+    month = models.PositiveIntegerField()
+    total_volume = models.DecimalField(max_digits=10, decimal_places=2)
+    total_transactions = models.PositiveIntegerField()
+    total_successful_transactions = models.PositiveIntegerField()
+    total_failed_transactions = models.PositiveIntegerField()
+    total_earnings = models.DecimalField(max_digits=10, decimal_places=2)
+    snapshot_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('year', 'month')
+        ordering = ['-year', '-month']
+
+    def __str__(self):
+        return f"Earnings for {self.month}/{self.year}: {self.total_earnings}"
+
+class Payout(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Completed', 'Completed'),
+        ('Rejected', 'Rejected'),
+    ]
+
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='payouts')
+    amount = models.DecimalField(max_digits=15, decimal_places=2)  # large amount support
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    requested_on = models.DateField()
+
+    def __str__(self):
+        return f"Payout to {self.staff.name} - {self.amount} ({self.status})"

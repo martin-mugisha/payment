@@ -1,15 +1,16 @@
+from django.views.decorators.http import require_POST
 from django.contrib.admin.models import LogEntry
-from .models import AuthLog
+from .models import AdminCommissionHistory, AuthLog
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import AuthLog
 from core.models import CustomUser
-from finance.models import PlatformSettings
+from finance.models import Payout, PlatformSettings
 from django.db.models.functions import TruncDate
 from django.contrib.admin.models import LogEntry, CHANGE, ADDITION, DELETION
 from django.db.models import Sum
 from finance.models import PlatformSettings, PlatformFeeHistory
-from staff.models import StaffCommissionHistory
+from staff.models import Balance, StaffCommissionHistory, WithdrawHistory
 import json
 from django.contrib import messages
 from core.utils import is_admin
@@ -17,6 +18,7 @@ from django.shortcuts import render
 from django.utils.timezone import localtime
 from finance.models import SystemEarnings
 from django.db import models
+from django.views.decorators.http import require_http_methods
 
 # Admin Dashboard View
 @login_required
@@ -24,7 +26,6 @@ from django.db import models
 def admin_dashboard(request):
     # Fetch all system earnings/statistics
     earnings = SystemEarnings.objects.all().order_by('-last_updated')
-    total_revenue = earnings.aggregate(total=models.Sum('total_earnings'))['total'] or 0.00
 
     # Prepare chart data for the last 10 records (or whatever makes sense)
     recent_earnings = earnings[:10][::-1]  # reverse for chronological order
@@ -33,7 +34,6 @@ def admin_dashboard(request):
 
     return render(request, 'dashboard/admin.html', {
         'earnings': earnings,
-        'total_revenue': total_revenue,
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
     })
@@ -59,6 +59,7 @@ def platform_settings(request):
     settings_obj = PlatformSettings.objects.first()
     platform_fee_history = PlatformFeeHistory.objects.all().order_by('-created_at')
     staff_commission_history = StaffCommissionHistory.objects.all().order_by('-created_at')
+    admin_commission_history = AdminCommissionHistory.objects.all().order_by('-created_at')
 
     if request.method == 'POST':
         if 'platform_fee_percent' in request.POST:
@@ -74,11 +75,17 @@ def platform_settings(request):
             new_commission = float(request.POST['staff_commission_percent'])
             StaffCommissionHistory.objects.create(percentage=new_commission)
             messages.success(request, f"Staff commission updated to {new_commission}%")
+        elif 'admin_commission_percent' in request.POST:
+            new_commission = float(request.POST['admin_commission_percent'])
+            AdminCommissionHistory.objects.create(percentage=new_commission)
+            messages.success(request, f"Admin commission updated to {new_commission}%")
+            
 
     return render(request, 'dashboard/platform_settings.html', {
         'settings': settings_obj,
         'platform_fee_history': platform_fee_history,
         'staff_commission_history': staff_commission_history,
+        'admin_commission_history': admin_commission_history,
     })
 
 
@@ -120,27 +127,26 @@ def staff_user_delete(request, user_id):
 def profile_view(request):
     return render(request, 'dashboard/profile.html', {'user': request.user})
 
-# Payouts Overview View
+
 @login_required
 @user_passes_test(is_admin)
 def payouts_overview(request):
-    # Sample payout data for demonstration
-    payouts = [
-        {'id': 1, 'merchant_name': 'Employee A', 'amount': 1000000, 'status': 'Pending', 'requested_on': '2025-06-20'},
-        {'id': 2, 'merchant_name': 'Emploee B', 'amount': 1500000, 'status': 'Completed', 'requested_on': '2025-06-18'},
-    ]
+    payouts = WithdrawHistory.objects.select_related('staff').order_by('status', '-requested_on')
     return render(request, 'dashboard/payouts_overview.html', {'payouts': payouts})
 
-# Placeholder views for missing admin templates
 @login_required
 @user_passes_test(is_admin)
-def kyc_status(request):
-    kyc_entries = [
-        {'id': 1, 'merchant_name': 'Merchant A', 'kyc_status': 'Approved', 'last_updated': '2025-06-21'},
-        {'id': 2, 'merchant_name': 'Merchant B', 'kyc_status': 'Pending', 'last_updated': '2025-06-20'},
-        {'id': 3, 'merchant_name': 'Merchant C', 'kyc_status': 'Rejected', 'last_updated': '2025-06-19'},
-    ]
-    return render(request, 'dashboard/kyc_status.html', {'kyc_entries': kyc_entries})
+@require_POST
+def approve_payout(request, payout_id):
+    payout = get_object_or_404(WithdrawHistory, id=payout_id, status='Pending')
+    balance = Balance.objects.filter(staff=payout.staff).first()
+
+    if balance and balance.balance >= payout.amount:
+        payout.status = 'Approved'
+        payout.save()
+        balance.balance -= payout.amount
+        balance.save()
+    return redirect('payouts')
 
 
 @login_required

@@ -8,11 +8,11 @@
 <div class="kpi-cards">
   <div class="kpi-card">
     <h3>Total Volume (This Month)</h3>
-    <p>UGX{{ total_volume_month }}</p>
+    <p>UGX{{earnings.tota_volume}}</p>
   </div>
   <div class="kpi-card">
     <h3>Platform Revenue</h3>
-    <p>UGX{{ platform_revenue }}</p>
+    <p>UGX{{earnings.total_earnings}}</p>
   </div>
   <div class="kpi-card">
     <h3>Active Merchants</h3>
@@ -20,7 +20,7 @@
   </div>
   <div class="kpi-card">
     <h3>Failed Transactions %</h3>
-    <p>{{ failed_tx_percent }}%</p>
+    <p>{{earnings.total_platform_fees}}%</p>
   </div>
 </div>
 
