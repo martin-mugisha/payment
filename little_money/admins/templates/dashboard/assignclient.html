@@ -1,0 +1,359 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block title %}Assign client{% endblock %}
+
+{% block content %}
+<h3>Assign Client</h3>
+
+<style>
+.export-csv-btn {
+  background: #38b2ac;
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.export-csv-btn:hover {
+  background: #319795;
+}
+.input-text {
+  padding: 6px 10px;
+  margin: 8px 0;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.row {
+  display: flex;
+  align-items: center;  
+  justify-content: space-between;
+  gap: 16px;
+}
+.tab-buttons {
+  display: flex;
+  border-bottom: 2px solid #e2e8f0;
+  margin-top: 20px;
+}
+.tab-buttons button {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #4a5568;
+  transition: border-color 0.3s, color 0.3s;
+  border-bottom: 3px solid transparent;
+}
+.tab-buttons button.active {
+  border-color: #2c3e50;
+  color: #2c3e50;
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
+.modal {
+  display: none; 
+  position: fixed; 
+  z-index: 1000; 
+  left: 0;
+  top: 0;
+  width: 100%; 
+  height: 100%; 
+  overflow: auto; 
+  background-color: rgba(0,0,0,0.4); 
+}
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto; 
+  padding: 20px;
+  border: 1px solid #888;
+  width: 300px; 
+  border-radius: 8px;
+  text-align: center;
+}
+.btn-primary {
+  background-color: #38b2ac;
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-primary:hover {
+  background-color: #319795;
+}
+.btn-close {
+  margin-top: 12px;
+  background-color: #e3342f;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-close:hover {
+  background-color: #cc1f1a;
+}
+</style>
+
+<div class="tab-container">
+  <div class="tab-buttons">
+    <button id="assign-tab-btn" onclick="showTab('assign')" class="active">Assign Client</button>
+    <button id="view-tab-btn" onclick="showTab('view')">View Assignments</button>
+    <button id="unassigned-tab-btn" onclick="showTab('unassigned')">Unassigned Staff & Clients</button>
+  </div>
+
+  <!-- Assign Client Tab -->
+  <div id="assign" class="tab-content active">
+    <form method="post" class="assign-form" id="assign-form">
+        {% csrf_token %}
+        <label for="staff">Staff:</label>
+        <select name="staff" id="staff" required>
+            {% for staff in staff_list %}
+                <option value="{{ staff.id }}">{{ staff.user.username }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="client">Client:</label>
+        <select name="client" id="client" required>
+            {% for client in client_list %}
+                <option value="{{ client.id }}">{{ client.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" class="export-csv-btn">Assign</button>
+    </form>
+  </div>
+
+  <!-- View Assignments Tab -->
+  <div id="view" class="tab-content">
+    <table class="data-table" id="assignments-table">
+      <thead>
+        <tr>
+          <th>Staff Name</th>
+          <th>Client Name</th>
+          <th>Assigned On</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="assignments-tbody">
+        {% for cb in assignments %}
+        <tr data-assignment-id="{{ cb.id }}">
+          <td>{{ cb.staff.user.username }}</td>
+          <td>{{ cb.client.name }}</td>
+          <td>{{ cb.assigned_at|date:"Y-m-d H:i" }}</td>
+          <td>
+            <form method="post" class="unassign-form" data-assignment-id="{{ cb.id }}">
+                {% csrf_token %}
+                <button type="submit" class="btn-action">Unassign</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="no-data">No client assignments found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Unassigned Staff & Clients Tab -->
+  <div id="unassigned" class="tab-content">
+    <div style="display: flex; gap: 20px;">
+      <div style="flex: 1;">
+        <h4>Unassigned Staff</h4>
+        <table class="data-table" id="unassigned-staff-table">
+          <thead>
+            <tr>
+              <th>Staff Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for staff in unassigned_staff %}
+            <tr>
+              <td>{{ staff.user.username }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td>No unassigned staff found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div style="flex: 1;">
+        <h4>Unassigned Clients</h4>
+        <table class="data-table" id="unassigned-clients-table">
+          <thead>
+            <tr>
+              <th>Client Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for client in unassigned_clients %}
+            <tr>
+              <td>{{ client.name }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td>No unassigned clients found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="success-modal" class="modal">
+  <div class="modal-content">
+    <p id="modal-message">Success!</p>
+    <button id="modal-close-btn" class="btn-close">Close</button>
+  </div>
+</div>
+
+<script>
+function showTab(tabName) {
+  const tabs = document.querySelectorAll('.tab-content');
+  const buttons = document.querySelectorAll('.tab-buttons button');
+
+  tabs.forEach(tab => tab.classList.remove('active'));
+  buttons.forEach(btn => btn.classList.remove('active'));
+
+  document.getElementById(tabName).classList.add('active');
+  document.getElementById(tabName + '-tab-btn').classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  showTab('assign'); // Default to 'assign' tab
+
+  // Handle unassign form submission with AJAX
+  document.querySelectorAll('.unassign-form').forEach(form => {
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+      const assignmentId = this.dataset.assignmentId;
+      const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      fetch(`/admins/assignments/unassign/${assignmentId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          showModal('Client unassigned successfully.');
+          refreshAssignmentsTable();
+        } else {
+          alert('Failed to unassign client.');
+        }
+      })
+      .catch(error => {
+        alert('Error: ' + error.message);
+      });
+    });
+  });
+
+  // Modal close button handler
+  document.getElementById('modal-close-btn').addEventListener('click', () => {
+    hideModal();
+    refreshAssignmentsTable();
+  });
+});
+
+function showModal(message) {
+  document.getElementById('modal-message').textContent = message;
+  document.getElementById('success-modal').style.display = 'block';
+}
+
+function hideModal() {
+  document.getElementById('success-modal').style.display = 'none';
+}
+
+function refreshAssignmentsTable() {
+  fetch('/admins/api/assignments/')
+    .then(response => response.json())
+    .then(data => {
+      const tbody = document.getElementById('assignments-tbody');
+      tbody.innerHTML = '';
+      if (data.assignments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">No client assignments found.</td></tr>';
+        return;
+      }
+      data.assignments.forEach(cb => {
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-assignment-id', cb.id);
+        tr.innerHTML = `
+          <td>${cb.staff_username}</td>
+          <td>${cb.client_name}</td>
+          <td>${cb.assigned_at}</td>
+          <td>
+            <form method="post" class="unassign-form" data-assignment-id="${cb.id}">
+              <input type="hidden" name="csrfmiddlewaretoken" value="${data.csrf_token}">
+              <button type="submit" class="btn-action">Unassign</button>
+            </form>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      // Reattach event listeners for new unassign forms
+      document.querySelectorAll('.unassign-form').forEach(form => {
+        form.addEventListener('submit', function(event) {
+          event.preventDefault();
+          const assignmentId = this.dataset.assignmentId;
+          const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+
+          fetch(`/admins/assignments/unassign/${assignmentId}/`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrfToken,
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+          })
+          .then(data => {
+            if (data.success) {
+              showModal('Client unassigned successfully.');
+              refreshAssignmentsTable();
+            } else {
+              alert('Failed to unassign client.');
+            }
+          })
+          .catch(error => {
+            alert('Error: ' + error.message);
+          });
+        });
+      });
+    });
+}
+</script>
+
+{% endblock %}

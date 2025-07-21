@@ -1,5 +1,7 @@
 from django.views.decorators.http import require_POST
 from django.contrib.admin.models import LogEntry
+
+from clients.models import Client, RecentTransaction
 from .models import AdminCommissionHistory, AuthLog
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
@@ -10,7 +12,7 @@ from django.db.models.functions import TruncDate
 from django.contrib.admin.models import LogEntry, CHANGE, ADDITION, DELETION
 from django.db.models import Sum
 from finance.models import PlatformSettings, PlatformFeeHistory
-from staff.models import Balance, StaffCommissionHistory, WithdrawHistory
+from staff.models import Balance, ClientAssignment, Staff, StaffCommissionHistory, WithdrawHistory
 import json
 from django.contrib import messages
 from core.utils import is_admin
@@ -38,18 +40,24 @@ def admin_dashboard(request):
         'chart_data': json.dumps(chart_data),
     })
 
+from finance.models import MonthlyEarnings, SystemEarnings
+
 @login_required
 @user_passes_test(is_admin)
 def finance_dashboard(request):
-    # Mock data for demonstration
-    platform_revenue = 123456.78
-    platform_balance = 98765.43
-    my_balance = 5432.10
+    # Get latest monthly earnings
+    latest_monthly_earnings = MonthlyEarnings.objects.order_by('-year', '-month').first()
+    monthly_earnings = latest_monthly_earnings.total_earnings if latest_monthly_earnings else 0.00
+    platform_earnings = latest_monthly_earnings.total_volume if latest_monthly_earnings else 0.00
+
+    # Get total balance from system earnings
+    system_earnings = SystemEarnings.load()
+    total_balance = system_earnings.total_earnings if system_earnings else 0.00
 
     context = {
-        'platform_revenue': platform_revenue,
-        'platform_balance': platform_balance,
-        'my_balance': my_balance,
+        'monthly_earnings': monthly_earnings,
+        'platform_earnings': platform_earnings,
+        'total_balance': total_balance,
     }
     return render(request, 'dashboard/finance.html', context)
 
@@ -151,18 +159,92 @@ def approve_payout(request, payout_id):
 
 @login_required
 @user_passes_test(is_admin)
-def chargebacks(request):
-    chargebacks = [
-        {'id': 101, 'merchant_name': 'Merchant A', 'amount': 250, 'reason': 'Fraud', 'status': 'Under Review', 'created_at': '2025-06-18'},
-        {'id': 102, 'merchant_name': 'Merchant B', 'amount': 500, 'reason': 'Unauthorized', 'status': 'Resolved', 'created_at': '2025-06-17'},
-    ]
-    return render(request, 'dashboard/chargebacks.html', {'chargebacks': chargebacks})
+def assignclient(request):
+    if request.method == "POST":
+        staff_id = request.POST.get("staff")
+        client_id = request.POST.get("client")
 
+        if staff_id and client_id:
+            staff = Staff.objects.get(id=staff_id)
+            client = Client.objects.get(id=client_id)
+
+            # Check if this assignment already exists
+            if not ClientAssignment.objects.filter(staff=staff, client=client).exists():
+                ClientAssignment.objects.create(staff=staff, client=client)
+
+        return redirect("admins:assignclient")  # Redirect after successful assignment to prevent resubmission
+
+    # For GET request, render form with available staff and clients
+    staff_list = Staff.objects.all()
+    client_list = Client.objects.all()
+    assignments = ClientAssignment.objects.select_related('staff', 'client').all()
+
+    # Fetch unassigned staff and clients
+    assigned_staff_ids = ClientAssignment.objects.values_list('staff_id', flat=True)
+    assigned_client_ids = ClientAssignment.objects.values_list('client_id', flat=True)
+    unassigned_staff = Staff.objects.exclude(id__in=assigned_staff_ids)
+    unassigned_clients = Client.objects.exclude(id__in=assigned_client_ids)
+
+    return render(request, 'dashboard/assignclient.html', {
+        'staff_list': staff_list,
+        'client_list': client_list,
+        'assignments': assignments,
+        'unassigned_staff': unassigned_staff,
+        'unassigned_clients': unassigned_clients,
+    })
+
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
+
+@login_required
+@user_passes_test(is_admin)
+def unassign_client(request, assignment_id):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        assignment = get_object_or_404(ClientAssignment, id=assignment_id)
+        assignment.delete()
+        return JsonResponse({'success': True})
+    else:
+        assignment = get_object_or_404(ClientAssignment, id=assignment_id)
+        assignment.delete()
+        return redirect('admins:assignclient')
+
+@login_required
+@user_passes_test(is_admin)
+def assignments_api(request):
+    assignments = ClientAssignment.objects.select_related('staff__user', 'client').all()
+    assignments_data = []
+    for a in assignments:
+        assignments_data.append({
+            'id': a.id,
+            'staff_username': a.staff.user.username,
+            'client_name': a.client.name,
+            'assigned_at': a.assigned_at.strftime('%Y-%m-%d %H:%M'),
+        })
+    csrf_token = get_token(request)
+    return JsonResponse({'assignments': assignments_data, 'csrf_token': csrf_token})
+
+from django.db.models import Q, Exists, OuterRef
 
 @login_required
 @user_passes_test(is_admin)
 def risk_alerts(request):
-    return render(request, 'dashboard/risk_alerts.html')
+    # Clients with zero or no balance
+    clients_with_no_balance = Client.objects.annotate(
+        balance_sum=Sum('finances__balance')
+    ).filter(Q(balance_sum__isnull=True) | Q(balance_sum=0))
+
+    # Clients with no recent transactions
+    recent_transactions = RecentTransaction.objects.filter(client=OuterRef('pk'))
+    clients_with_no_transactions = Client.objects.annotate(
+        has_transactions=Exists(recent_transactions)
+    ).filter(has_transactions=False)
+
+    # Combine clients who have no balance or no transactions
+    clients_to_alert = clients_with_no_balance.union(clients_with_no_transactions)
+
+    return render(request, 'dashboard/risk_alerts.html', {
+        'clients_to_alert': clients_to_alert
+    })
 
 @login_required
 @user_passes_test(is_admin)
@@ -173,16 +255,6 @@ def profile_admin(request):
 @user_passes_test(is_admin)
 def staff_user(request):
     return render(request, 'dashboard/staff_user.html')
-
-"""@login_required
-@user_passes_test(is_admin)  
-def activity_logs(request):
-    # Fetch all log entries ordered by action time descending
-    logs = LogEntry.objects.select_related('user').order_by('-action_time')[:100]  # limit to last 100 entries
-
-    # Pass logs to template
-    return render(request, 'dashboard/activity_logs.html', {'logs': logs})
-"""
 
 @login_required
 @user_passes_test(is_admin)
