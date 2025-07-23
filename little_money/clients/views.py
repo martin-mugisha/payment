@@ -151,7 +151,7 @@ def payments(request):
                 amount_decimal = Decimal(amount)
                 base_amount = int(amount_decimal)
 
-                trader_id = client.trader_id if hasattr(client, 'trader_id') else str(client.id)
+                trader_id = trader_id if hasattr(client, 'trader_id') else str(client.id)
                 message = f"{transaction_type.capitalize()} for {name} ({phone})"
 
                 return process_transaction(
