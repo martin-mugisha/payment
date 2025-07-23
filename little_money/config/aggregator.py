@@ -173,6 +173,7 @@ class PrepaidBill:
         get_bill_request.save()
         try:
             resp = requests.post(url, json=request_data, headers=headers, timeout=10)
+            print(resp)
             resp.raise_for_status()
             return resp.json()
         except requests.RequestException as e:
