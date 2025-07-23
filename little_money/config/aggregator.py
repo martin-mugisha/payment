@@ -169,6 +169,7 @@ class PrepaidBill:
             trader_id=trader_id,
             amount=amount
         )
+        print (get_bill_request)
         get_bill_request.save()
         try:
             resp = requests.post(url, json=request_data, headers=headers, timeout=10)
