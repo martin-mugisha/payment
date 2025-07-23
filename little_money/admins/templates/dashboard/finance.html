@@ -10,13 +10,20 @@
 
 <div id="revenue-balance" class="tab-content active">
   <h4>Platform Revenue Details and Balance</h4>
-  <p>Mock data for platform revenue and balance will be shown here.</p>
+  <ul>
+    <li><strong>Monthly Revenue:</strong> {{ monthly_earnings }}</li>
+    <li><strong>Total Platform Volume:</strong> {{ platform_earnings }}</li>
+    <li><strong>Total Gross Platform Earnings (before commissions):</strong> {{ total_balance }}</li>
+    <li><strong>Total Staff Commissions Paid:</strong> {{ staff_commissions }}</li>
+    <li><strong>Net Platform Balance (after staff commissions):</strong> {{ net_platform_balance }}</li>
+  </ul>
 </div>
 
 <div id="my-balance" class="tab-content">
   <h4>My Balance</h4>
-  <p>Mock data for my balance will be shown here.</p>
+  <p>You currently have <strong>{{ admin_balance }}</strong> in your account as your share of the admin commission.</p>
 </div>
+
 
 <style>
 .tab-buttons {

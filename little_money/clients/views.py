@@ -8,9 +8,13 @@ from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils.timezone import localdate
 import datetime
-from collections import defaultdict
 from django.db.models import Sum
 from calendar import monthrange
+from config.help import process_transaction
+from django.contrib import messages
+from django.http import JsonResponse
+from decimal import Decimal
+from django.utils.timezone import now
 
 
 def is_all_zero(data):
@@ -125,141 +129,117 @@ def payments(request):
 
     if request.method == 'POST':
         if 'single_payment' in request.POST:
-            # Handle single payment form submission
-            from decimal import Decimal
-            from django.utils.timezone import now
+            try:
+                name = request.POST.get('name')
+                phone = request.POST.get('phone')
+                amount = request.POST.get('amount')
+                payment_method = request.POST.get('payment_method')
+                transaction_type = request.POST.get('transaction_type')
 
-            name = request.POST.get('name')
-            phone = request.POST.get('phone')
-            amount = request.POST.get('amount')
-            payment_method = request.POST.get('payment_method')
-            transaction_type = request.POST.get('transaction_type')
+                if payment_method not in ['MTN', 'Airtel']:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid payment method selected.'}, status=400)
+                if transaction_type not in ['collection', 'disbursement']:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid transaction type selected.'}, status=400)
 
-            if payment_method not in ['MTN', 'Airtel']:
-                messages.error(request, 'Invalid payment method selected.')
-            elif transaction_type not in ['collection', 'disbursement']:
-                messages.error(request, 'Invalid transaction type selected.')
-            else:
-                from decimal import Decimal
-                client_obj, _ = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
-                finances, created = Finances.objects.get_or_create(client=client_obj, defaults={'balance': Decimal('0.00')})
+                # Mapping to expected integer values
+                map_channel = {'MTN': 1, 'Airtel': 2}
+                t_type_map = {'collection': 1, 'disbursement': 2}
+
+                channel = map_channel[payment_method]
+                t_type = t_type_map[transaction_type]
+
                 amount_decimal = Decimal(amount)
+                base_amount = int(amount_decimal)
 
-                # Validation for disbursement amount <= balance
-                if transaction_type == 'disbursement' and amount_decimal > finances.balance:
-                    messages.error(request, f'Disbursement amount {amount} exceeds available balance {finances.balance}. Transaction cancelled.')
-                    return redirect('client:payments')
+                trader_id = client.trader_id if hasattr(client, 'trader_id') else str(client.id)
+                message = f"{transaction_type.capitalize()} for {name} ({phone})"
 
-                # Record the payment in DailyPayment and RecentTransaction
-                DailyPayment.objects.create(
-                    client=client_obj,
-                    date=now().date(),
-                    amount=amount_decimal if transaction_type == 'collection' else -amount_decimal,
+                return process_transaction(
+                    channel=channel,
+                    t_type=t_type,
+                    client_id=client.id,
+                    base_amount=base_amount,
+                    trader_id=trader_id,
+                    message=message,
+                    name=name
                 )
-                RecentTransaction.objects.create(
-                    client=client_obj,
-                    date=now().date(),
-                    amount=amount_decimal,
-                    recipient=name,
-                    phone=phone,
-                )
-                # Update or create Finances balance accordingly
-                if transaction_type == 'collection':
-                    finances.balance += amount_decimal
-                else:
-                    finances.balance -= amount_decimal
 
-                # Ensure balance never goes below 0
-                if finances.balance < 0:
-                    messages.error(request, 'Balance cannot go below zero. Transaction cancelled.')
-                    return redirect('client:payments')
-
-                finances.save()
-
-                messages.success(request, f'Single payment of {amount} to {name} ({phone}) via {payment_method} as {transaction_type} processed.')
-
-            return redirect('client:payments')
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
         elif 'multiple_payments' in request.POST:
-            from decimal import Decimal
-            from django.utils.timezone import now
-
-            # Handle multiple payments file upload
-            payment_file = request.FILES.get('payment_file')
-            if not payment_file:
-                messages.error(request, 'No file uploaded.')
-                return redirect('client:payments')
-
-            if not payment_file.name.endswith(('.xls', '.xlsx')):
-                messages.error(request, 'Invalid file type. Please upload an Excel file.')
-                return redirect('client:payments')
-
             try:
+                payment_file = request.FILES.get('payment_file')
+                if not payment_file:
+                    return JsonResponse({'status': 'error', 'message': 'No file uploaded.'}, status=400)
+
+                if not payment_file.name.endswith(('.xls', '.xlsx')):
+                    return JsonResponse({'status': 'error', 'message': 'Invalid file type. Please upload an Excel file.'}, status=400)
+
                 wb = openpyxl.load_workbook(payment_file)
                 sheet = wb.active
                 payments_processed = 0
-                client_obj, _ = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+                errors = []
+
                 for row in sheet.iter_rows(min_row=2, values_only=True):
-                    # Expecting row to have name, phone, amount, payment_method, optionally transaction_type
                     if len(row) == 4:
                         name, phone, amount, payment_method = row
-                        transaction_type = 'collection'  # default if not provided
+                        transaction_type = 'collection'
                     elif len(row) >= 5:
                         name, phone, amount, payment_method, transaction_type = row
                         if transaction_type not in ['collection', 'disbursement']:
-                            transaction_type = 'collection'  # fallback default
+                            transaction_type = 'collection'
                     else:
-                        continue  # skip rows that don't have enough columns
-
-                    if payment_method not in ['MTN', 'Airtel']:
-                        continue  # skip invalid payment methods
-
-                    from decimal import Decimal
-                    amount_decimal = Decimal(amount)
-                    finances, created = Finances.objects.get_or_create(client=client_obj, defaults={'balance': Decimal('0.00')})
-
-                    # Validation for disbursement amount <= balance
-                    if transaction_type == 'disbursement' and amount_decimal > finances.balance:
-                        continue  # skip this payment
-
-                    # Record each payment in DailyPayment and RecentTransaction
-                    DailyPayment.objects.create(
-                        client=client_obj,
-                        date=now().date(),
-                        amount=amount_decimal if transaction_type == 'collection' else -amount_decimal,
-                    )
-                    RecentTransaction.objects.create(
-                        client=client_obj,
-                        date=now().date(),
-                        amount=amount_decimal,
-                        recipient=name,
-                        phone=phone,
-                    )
-                    # Update or create Finances balance
-                    if transaction_type == 'collection':
-                        finances.balance += amount_decimal
-                    else:
-                        finances.balance -= amount_decimal
-
-                    # Ensure balance never goes below 0
-                    if finances.balance < 0:
-                        # Rollback this payment by skipping save and continue
                         continue
 
-                    finances.save()
+                    if payment_method not in ['MTN', 'Airtel']:
+                        continue
 
-                    payments_processed += 1
-                messages.success(request, f'{payments_processed} payments processed from the uploaded file.')
+                    try:
+                        amount_decimal = Decimal(amount)
+                        base_amount = int(amount_decimal)
+
+                        map_channel = {'MTN': 1, 'Airtel': 2}
+                        t_type_map = {'collection': 1, 'disbursement': 2}
+
+                        channel = map_channel[payment_method]
+                        t_type = t_type_map[transaction_type]
+
+                        trader_id = client.trader_id if hasattr(client, 'trader_id') else str(client.id)
+                        message = f"{transaction_type.capitalize()} for {name} ({phone})"
+
+                        result = process_transaction(
+                            channel=channel,
+                            t_type=t_type,
+                            client_id=client.id,
+                            base_amount=base_amount,
+                            trader_id=trader_id,
+                            message=message,
+                            name=name
+                        )
+
+                        if result.status_code == 200:
+                            payments_processed += 1
+                        else:
+                            errors.append({'row': row, 'message': result.json().get('message', 'Unknown error')})
+
+                    except Exception as e:
+                        errors.append({'row': row, 'message': str(e)})
+
+                return JsonResponse({
+                    'status': 'success',
+                    'processed': payments_processed,
+                    'errors': errors
+                })
+
             except Exception as e:
-                messages.error(request, f'Error processing file: {str(e)}')
+                return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-            return redirect('client:payments')
-
+    # For GET request
     scheduled_payments = UpcomingPayment.objects.filter(client=client).order_by('date')
-    payment_methods = ['MTN', 'Airtel']
     context = {
         'client': client,
-        'payment_methods': payment_methods,
+        'payment_methods': ['MTN', 'Airtel'],
         'scheduled_payments': scheduled_payments,
     }
     return render(request, 'dashboard/payments.html', context)

@@ -1,13 +1,14 @@
 from django.views.decorators.http import require_POST
 from django.contrib.admin.models import LogEntry
-
+#from finance.models import 
 from clients.models import Client, RecentTransaction
+from config.aggregator import GetBalance
 from .models import AdminCommissionHistory, AuthLog
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import AuthLog
 from core.models import CustomUser
-from finance.models import Payout, PlatformSettings
+from finance.models import Payout, PlatformSettings, StaffCommissionAggregate, MonthlyEarnings, SystemEarnings
 from django.db.models.functions import TruncDate
 from django.contrib.admin.models import LogEntry, CHANGE, ADDITION, DELETION
 from django.db.models import Sum
@@ -28,7 +29,12 @@ from django.views.decorators.http import require_http_methods
 def admin_dashboard(request):
     # Fetch all system earnings/statistics
     earnings = SystemEarnings.objects.all().order_by('-last_updated')
-
+    balances = GetBalance()
+    response = balances.get_balance()
+    balance = response.query_response["Data"].get("Balance", 0.0)
+    if balance is not None:
+        earnings.balance += float(balance)
+        earnings.save()
     # Prepare chart data for the last 10 records (or whatever makes sense)
     recent_earnings = earnings[:10][::-1]  # reverse for chronological order
     chart_labels = [e.last_updated.strftime("%Y-%m-%d") for e in recent_earnings]
@@ -40,26 +46,34 @@ def admin_dashboard(request):
         'chart_data': json.dumps(chart_data),
     })
 
-from finance.models import MonthlyEarnings, SystemEarnings
 
 @login_required
 @user_passes_test(is_admin)
 def finance_dashboard(request):
-    # Get latest monthly earnings
+    # Monthly summary
     latest_monthly_earnings = MonthlyEarnings.objects.order_by('-year', '-month').first()
     monthly_earnings = latest_monthly_earnings.total_earnings if latest_monthly_earnings else 0.00
     platform_earnings = latest_monthly_earnings.total_volume if latest_monthly_earnings else 0.00
 
-    # Get total balance from system earnings
+    # System earnings
     system_earnings = SystemEarnings.load()
-    total_balance = system_earnings.total_earnings if system_earnings else 0.00
+    staff_commissions = StaffCommissionAggregate.load().total_commission
+    net_platform_balance = system_earnings.net_platform_earnings
+    total_balance = system_earnings.total_earnings
+
+    # Admin personal balance (assuming profile)
+    admin_balance = request.user.profile.balance if hasattr(request.user, 'profile') else 0.00
 
     context = {
         'monthly_earnings': monthly_earnings,
         'platform_earnings': platform_earnings,
         'total_balance': total_balance,
+        'net_platform_balance': net_platform_balance,
+        'staff_commissions': staff_commissions,
+        'admin_balance': admin_balance,
     }
     return render(request, 'dashboard/finance.html', context)
+
 
 @login_required
 @user_passes_test(is_admin)

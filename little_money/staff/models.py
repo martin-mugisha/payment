@@ -24,7 +24,8 @@ class Balance(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.client.name} - Balance: {self.balance}"
+        return f"{self.staff.name} - Balance: {self.balance}"
+
 
 class WithdrawHistory(models.Model):
     NETWORK_CHOICES = [
@@ -54,8 +55,11 @@ class ClientAssignment(models.Model):
     client = models.ForeignKey(ClientModel, on_delete=models.CASCADE, related_name='assigned_staff')
     assigned_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('staff', 'client')
     def __str__(self):
         return f"{self.staff.username} → {self.client.name}"
+
 
 class Transaction(models.Model):
     recent_transaction = models.OneToOneField(

@@ -23,3 +23,7 @@ class AdminCommissionHistory(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+class AdminProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
