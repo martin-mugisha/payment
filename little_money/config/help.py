@@ -59,11 +59,9 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 timestamp=bill_response.get("timestamp", int(time.time())),
                 trader_id=bill_response.get("trader_id", trader_id),
                 full_name=bill_response.get("full_name", name),
-                channel=bill_response.get("channel", 1),
                 amount=base_amount,
                 service_charge=bill_response.get("service_charge", Decimal('0.00')),
                 service_charge_rate=bill_response.get("service_charge_rate", Decimal('0.00')),
-                client=client
             )
             response.save()
 
