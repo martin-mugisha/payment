@@ -24,12 +24,12 @@ class UnifiedOrderResponse(models.Model):
     
     out_trade_no = models.CharField(max_length=36)
     transaction_id = models.CharField(max_length=100)
-    amount = models.DecimalField(max_digits=12, decimal_places=6,default=0.00)  # Base amount before fees
-    actual_payment_amount = models.DecimalField(max_digits=12, decimal_places=6)
-    actual_collect_amount = models.DecimalField(max_digits=12, decimal_places=6)
-    payer_charge = models.DecimalField(max_digits=12, decimal_places=6)  # Aggregator's fee
-    payee_charge = models.DecimalField(max_digits=12, decimal_places=6)  # Your platform fee
-    channel_charge = models.DecimalField(max_digits=12, decimal_places=6)
+    amount = models.DecimalField(max_digits=12, decimal_places=2,default=0.00)  # Base amount before fees
+    actual_payment_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    actual_collect_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payer_charge = models.DecimalField(max_digits=12, decimal_places=2)  # Aggregator's fee
+    payee_charge = models.DecimalField(max_digits=12, decimal_places=2)  # Your platform fee
+    channel_charge = models.DecimalField(max_digits=12, decimal_places=2)
     client = models.ForeignKey('clients.Client', on_delete=models.SET_NULL, null=True, related_name='orders')
 
     def __str__(self):
@@ -51,11 +51,11 @@ class OrderQueryResponse(models.Model):
     pay_time = models.DateTimeField(null=True, blank=True)
     out_trade_no = models.CharField(max_length=36)
     transaction_id = models.CharField(max_length=100)
-    amount = models.DecimalField(max_digits=12, decimal_places=6)
-    actual_payment_amount = models.DecimalField(max_digits=12, decimal_places=6)
-    actual_collect_amount = models.DecimalField(max_digits=12, decimal_places=6)
-    payer_charge = models.DecimalField(max_digits=12, decimal_places=6)
-    payee_charge = models.DecimalField(max_digits=12, decimal_places=6)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    actual_payment_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    actual_collect_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payer_charge = models.DecimalField(max_digits=12, decimal_places=2)
+    payee_charge = models.DecimalField(max_digits=12, decimal_places=2)
     pay_message = models.CharField(max_length=255, null=True, blank=True)
 
 
@@ -64,11 +64,11 @@ class PaymentNotification(models.Model):
     pay_time = models.DateTimeField(null=True, blank=True)
     out_trade_no = models.CharField(max_length=36)
     transaction_id = models.CharField(max_length=100)
-    amount = models.DecimalField(max_digits=12, decimal_places=6)
-    actual_payment_amount = models.DecimalField(max_digits=12, decimal_places=6)
-    actual_collect_amount = models.DecimalField(max_digits=12, decimal_places=6)
-    payer_charge = models.DecimalField(max_digits=12, decimal_places=6)
-    payee_charge = models.DecimalField(max_digits=12, decimal_places=6)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    actual_payment_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    actual_collect_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payer_charge = models.DecimalField(max_digits=12, decimal_places=2)
+    payee_charge = models.DecimalField(max_digits=12, decimal_places=2)
     pay_message = models.CharField(max_length=255, null=True, blank=True)
 
 
@@ -91,8 +91,8 @@ class PrepaidBillResponse(models.Model):
     given_name = models.CharField(max_length=50)
     family_name = models.CharField(max_length=50)
     full_name = models.CharField(max_length=100)
-    amount = models.DecimalField(max_digits=12, decimal_places=6)
-    service_charge = models.DecimalField(max_digits=12, decimal_places=6)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    service_charge = models.DecimalField(max_digits=12, decimal_places=2)
     service_charge_rate = models.DecimalField(max_digits=5, decimal_places=2)
 
 
@@ -107,7 +107,7 @@ class BalanceResponse(models.Model):
     extras = models.TextField(null=True, blank=True)
     timestamp = models.BigIntegerField()
 
-    balance = models.DecimalField(max_digits=12, decimal_places=6)
+    balance = models.DecimalField(max_digits=12, decimal_places=2)
 
 
 class StatementRequest(models.Model):
