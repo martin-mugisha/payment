@@ -151,7 +151,7 @@ def payments(request):
                 amount_decimal = Decimal(amount)
                 base_amount = int(amount_decimal)
 
-                trader_id = phone
+                trader_id = str(phone)
                 message = f"{transaction_type.capitalize()} for {name} ({phone})"
 
                 return process_transaction(
