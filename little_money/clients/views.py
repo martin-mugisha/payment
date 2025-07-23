@@ -166,7 +166,7 @@ def payments(request):
 
             except Exception as e:
                 message = f"failed due to{str(e)}"
-                #return render(request, 'admins:payments.html')
+                return render(request, 'dashboard/payments.html')
 
         elif 'multiple_payments' in request.POST:
             try:
