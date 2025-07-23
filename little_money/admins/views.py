@@ -27,21 +27,27 @@ from django.views.decorators.http import require_http_methods
 @login_required
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    # Fetch all system earnings/statistics
-    earnings = SystemEarnings.objects.all().order_by('-last_updated')
+    # Get the most recent earnings entry
+    latest_earning = SystemEarnings.objects.order_by('-last_updated').first()
+
+    # Fetch balance from external source
     balances = GetBalance()
     response = balances.get_balance()
     balance = response.get("query_response", {}).get("Data", {}).get("Balance", 0.0)
-    if balance is not None:
-        earnings.balance += float(balance)
-        earnings.save()
-    # Prepare chart data for the last 10 records (or whatever makes sense)
-    recent_earnings = earnings[:10][::-1]  # reverse for chronological order
+
+    # Safely update balance if a record exists
+    if latest_earning:
+        latest_earning.balance += float(balance or 0.0)
+        latest_earning.save()
+
+    # Prepare the 10 most recent earnings for chart data
+    recent_earnings = SystemEarnings.objects.order_by('-last_updated')[:10][::-1]
+
     chart_labels = [e.last_updated.strftime("%Y-%m-%d") for e in recent_earnings]
-    chart_data = [float(e.total_earnings) for e in recent_earnings]
+    chart_data = [float(e.total_earnings or 0.0) for e in recent_earnings]
 
     return render(request, 'dashboard/admin.html', {
-        'earnings': earnings,
+        'earnings': recent_earnings,
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
     })
