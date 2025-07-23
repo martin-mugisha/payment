@@ -52,8 +52,8 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
 
         with transaction.atomic():
             response = PrepaidBillResponse(
-                status_code=bill_response.get("status_code", 0),
-                succeeded=bill_response.get("succeeded", False),
+                status_code=bill_response.get("status_code"),
+                succeeded=bill_response.get("succeeded"),
                 errors=bill_response.get("errors"),
                 extras=bill_response.get("extras"),
                 timestamp=bill_response.get("timestamp", int(time.time())),
@@ -65,7 +65,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             )
             response.save()
 
-            if not response.succeeded:
+            if response.status_code != 200:
                 return JsonResponse({"status": "error", "message": response.errors}, status=400)
 
             unifiedorder = UnifiedOrder()
