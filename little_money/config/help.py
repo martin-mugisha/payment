@@ -46,6 +46,8 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             channel=channel,
             transaction_type=t_type
         )
+        print("Bill response:", bill_response)
+
 
         if "error" in bill_response:
             return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
@@ -66,7 +68,9 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             response.save()
 
             if response.status_code != 200:
-                return JsonResponse({"status": "error", "message": response.errors}, status=400)
+                error_message = response.errors or "Bill request failed with unknown error."
+                return JsonResponse({"status": "error", "message": error_message}, status=400)
+
 
             unifiedorder = UnifiedOrder()
             unifiedorder_response = unifiedorder.create_order(
