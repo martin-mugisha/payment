@@ -31,7 +31,7 @@ def admin_dashboard(request):
     earnings = SystemEarnings.objects.all().order_by('-last_updated')
     balances = GetBalance()
     response = balances.get_balance()
-    balance = response["query_response"]["Data"].get("Balance", 0.0)
+    balance = response.get("query_response", {}).get("Data", {}).get("Balance", 0.0)
     if balance is not None:
         earnings.balance += float(balance)
         earnings.save()
