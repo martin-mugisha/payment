@@ -473,6 +473,7 @@ form button:hover {
 
   .sidebar.active {
     left: 0; /* Slide sidebar into view */
+    z-index: 9999;
   }
 
   #close-sidebar-btn {

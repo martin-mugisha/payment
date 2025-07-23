@@ -1,6 +1,6 @@
 from django.views.decorators.http import require_POST
 from django.contrib.admin.models import LogEntry
-#from finance.models import 
+from decimal import Decimal
 from clients.models import Client, RecentTransaction
 from config.aggregator import GetBalance
 from .models import AdminCommissionHistory, AuthLog
@@ -37,7 +37,7 @@ def admin_dashboard(request):
 
     # Safely update balance if a record exists
     if latest_earning:
-        latest_earning.balance += float(balance or 0.0)
+        latest_earning.balance += Decimal(balance or 0.0)
         latest_earning.save()
 
     # Prepare the 10 most recent earnings for chart data
