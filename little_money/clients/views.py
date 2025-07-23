@@ -165,7 +165,8 @@ def payments(request):
                 )
 
             except Exception as e:
-                return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+                message = f"failed due to{str(e)}"
+                #return render(request, 'admins:payments.html')
 
         elif 'multiple_payments' in request.POST:
             try:
