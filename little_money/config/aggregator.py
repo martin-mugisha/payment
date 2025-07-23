@@ -157,7 +157,7 @@ class PrepaidBill:
         }
         request_data["Sign"] = generate_signature(request_data, apikey)
 
-        print(request_data)
+            
         url = f"{base_url}/bill"
         headers = {
             'Content-Type': 'application/json',
