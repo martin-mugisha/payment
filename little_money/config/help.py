@@ -28,7 +28,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
         charge = PlatformEarnings()
 
         fee = charge.calculate_platform_fee(base_amount)
-        fee = Decimal(str(fee))  # ensure it's a Decimal
+        fee = Decimal(str(fee))  # ensure Decimal
 
         total_amount = Decimal(base_amount) + fee
 
@@ -39,39 +39,9 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
         if total_amount <= 0:
             return JsonResponse({"status": "error", "message": "Total amount must be greater than zero."}, status=400)
 
-        bill = PrepaidBill()
-        bill_response = bill.get_bill(
-            trader_id=trader_id,
-            amount=int(total_amount * 100),
-            channel=channel,
-            transaction_type=t_type
-        )
-        print("Bill response:", bill_response)
-
-
-        if "error" in bill_response:
-            return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
+        # 🔽 SKIP PrepaidBill section entirely
 
         with transaction.atomic():
-            response = PrepaidBillResponse(
-                status_code=bill_response.get("status_code"),
-                succeeded=bill_response.get("succeeded"),
-                errors=bill_response.get("errors"),
-                extras=bill_response.get("extras"),
-                timestamp=bill_response.get("timestamp", int(time.time())),
-                trader_id=bill_response.get("trader_id", trader_id),
-                full_name=bill_response.get("full_name", name),
-                amount=base_amount,
-                service_charge=bill_response.get("service_charge", Decimal('0.00')),
-                service_charge_rate=bill_response.get("service_charge_rate", Decimal('0.00')),
-            )
-            response.save()
-
-            if response.status_code != 200:
-                error_message = response.errors or "Bill request failed with unknown error."
-                return JsonResponse({"status": "error", "message": error_message}, status=400)
-
-
             unifiedorder = UnifiedOrder()
             unifiedorder_response = unifiedorder.create_order(
                 trader_id=trader_id,
@@ -82,20 +52,21 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 message=message
             )
 
+            data = unifiedorder_response.get("Data", {})
             uni_res = UnifiedOrderResponse(
                 status_code=unifiedorder_response.get("StatusCode", 0),
                 succeeded=unifiedorder_response.get("Succeeded", False),
                 errors=unifiedorder_response.get("Errors"),
                 extras=unifiedorder_response.get("Extras"),
                 timestamp=unifiedorder_response.get("Timestamp", int(time.time())),
-                out_trade_no=unifiedorder_response["Data"].get("OutTradeNo", "100000006"),
-                transaction_id=unifiedorder_response["Data"].get("TransactionId", "100000006"),
-                amount=unifiedorder_response["Data"].get("Amount", base_amount),
-                actual_payment_amount=unifiedorder_response["Data"].get("ActualPaymentAmount", total_amount),
-                actual_collect_amount=unifiedorder_response["Data"].get("ActualCollectAmount", total_amount),
-                payer_charge=unifiedorder_response["Data"].get("PayerCharge", Decimal('0.00')),
-                payee_charge=unifiedorder_response["Data"].get("PayeeCharge", Decimal('0.00')),
-                channel_charge=unifiedorder_response["Data"].get("ChannelCharge", Decimal('0.00')),
+                out_trade_no=data.get("OutTradeNo", "100000006"),
+                transaction_id=data.get("TransactionId", "100000006"),
+                amount=data.get("Amount", base_amount),
+                actual_payment_amount=data.get("ActualPaymentAmount", total_amount),
+                actual_collect_amount=data.get("ActualCollectAmount", total_amount),
+                payer_charge=data.get("PayerCharge", Decimal('0.00')),
+                payee_charge=data.get("PayeeCharge", Decimal('0.00')),
+                channel_charge=data.get("ChannelCharge", Decimal('0.00')),
                 client=client
             )
             uni_res.save()
@@ -130,13 +101,12 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 system.save()
 
             if unifiedorder_response.get("StatusCode") != 200 or not unifiedorder_response.get("Succeeded"):
-                system.total_transactions += 1
                 max_attempts = 3
                 attempt = 0
                 query_response = None
                 while attempt < max_attempts:
                     query_result = PaymentResults()
-                    query_response = query_result.get_result(unifiedorder_response["Data"]["OutTradeNo"])
+                    query_response = query_result.get_result(data.get("OutTradeNo"))
                     if query_response.get("StatusCode") == 200 and query_response.get("Succeeded"):
                         break
                     attempt += 1
@@ -145,22 +115,23 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 if query_response.get("StatusCode") != 200 or not query_response.get("Succeeded"):
                     return JsonResponse({"status": "error", "message": query_response.get("Errors", "Unknown error")}, status=500)
 
+                query_data = query_response.get("Data", {})
                 qu_res = OrderQueryResponse(
                     status_code=query_response.get("StatusCode"),
                     succeeded=query_response.get("Succeeded", False),
                     errors=query_response.get("Errors"),
                     extras=query_response.get("Extras"),
                     timestamp=query_response.get("Timestamp", int(time.time())),
-                    pay_status=query_response["Data"].get("PayStatus"),
-                    pay_time=query_response["Data"].get("PayTime"),
-                    out_trade_no=query_response["Data"].get("OutTradeNo"),
-                    transaction_id=query_response["Data"].get("TransactionId", "100000006"),
-                    amount=query_response["Data"].get("Amount", base_amount),
-                    actual_payment_amount=query_response["Data"].get("ActualPaymentAmount", total_amount),
-                    actual_collect_amount=query_response["Data"].get("ActualCollectAmount", total_amount),
-                    payer_charge=query_response["Data"].get("PayerCharge", Decimal('0.00')),
-                    payee_charge=query_response["Data"].get("PayeeCharge", Decimal('0.00')),
-                    pay_message=query_response["Data"].get("PayMessage", "")
+                    pay_status=query_data.get("PayStatus"),
+                    pay_time=query_data.get("PayTime"),
+                    out_trade_no=query_data.get("OutTradeNo"),
+                    transaction_id=query_data.get("TransactionId", "100000006"),
+                    amount=query_data.get("Amount", base_amount),
+                    actual_payment_amount=query_data.get("ActualPaymentAmount", total_amount),
+                    actual_collect_amount=query_data.get("ActualCollectAmount", total_amount),
+                    payer_charge=query_data.get("PayerCharge", Decimal('0.00')),
+                    payee_charge=query_data.get("PayeeCharge", Decimal('0.00')),
+                    pay_message=query_data.get("PayMessage", "")
                 )
                 qu_res.save()
 
