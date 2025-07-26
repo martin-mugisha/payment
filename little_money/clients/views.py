@@ -128,7 +128,7 @@ def payments(request):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
 
     if request.method == 'POST':
-        if 'single_payment' in request.POST: 
+        if 'single_payment' in request.POST:
             try:
                 name = request.POST.get('name')
                 phone = request.POST.get('phone')
