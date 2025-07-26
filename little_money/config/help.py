@@ -1,4 +1,5 @@
 from decimal import Decimal
+import json
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import transaction
@@ -51,18 +52,26 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
 
         with transaction.atomic():
+            data = bill_response.get("Data")
+            if not isinstance(data, dict):
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Invalid or missing 'Data' in bill response."
+                }, status=500)
+
             response = PrepaidBillResponse(
-                status_code=bill_response.get("status_code", 0),
-                succeeded=bill_response.get("succeeded"),
-                errors=bill_response.get("errors"),
-                extras=bill_response.get("extras"),
-                timestamp=bill_response["Data"].get("timestamp", int(time.time())),
-                trader_id=bill_response["Data"].get("trader_id", trader_id),
-                full_name=bill_response["Data"].get("full_name", name),
+                status_code=bill_response.get("StatusCode", 0),
+                succeeded=bill_response.get("Succeeded"),
+                errors=bill_response.get("Errors"),
+                extras=bill_response.get("Extras"),
+                timestamp=data.get("Timestamp", int(time.time())),
+                trader_id=data.get("TraderID", trader_id),
+                full_name=data.get("FullName", name),
                 amount=base_amount,
-                service_charge=bill_response["Data"].get("service_charge", Decimal('0.00')),
-                service_charge_rate=bill_response["Data"].get("service_charge_rate", Decimal('0.00')),
+                service_charge=data.get("ServiceCharge", Decimal('0.00')),
+                service_charge_rate=data.get("ServiceChargeRate", Decimal('0.00')),
             )
+            print("Bill response:", json.dumps(bill_response, indent=2))
             response.save()
 
             if response.status_code != 200:
