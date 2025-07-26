@@ -52,7 +52,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
 
         with transaction.atomic():
             response = PrepaidBillResponse(
-                status_code=bill_response.get("status_code"),
+                status_code=bill_response.get("status_code", 0),
                 succeeded=bill_response.get("succeeded"),
                 errors=bill_response.get("errors"),
                 extras=bill_response.get("extras"),
