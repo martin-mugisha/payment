@@ -157,11 +157,10 @@ class PrepaidBill:
         }
         request_data["Sign"] = generate_signature(request_data, apikey)
 
-        print(request_data)
+        print("Request payload:", request_data)
         url = f"{base_url}/bill"
-        headers = {
-            'Content-Type': 'application/json',
-        }
+        headers = {'Content-Type': 'application/json'}
+        
         get_bill_request = PrepaidBillRequest(
             timestamp=timestamp,
             channel=channel,
@@ -169,17 +168,23 @@ class PrepaidBill:
             trader_id=trader_id,
             amount=amount
         )
-        print (get_bill_request)
+        print("Saving PrepaidBillRequest object:", get_bill_request)
         get_bill_request.save()
+
         try:
             resp = requests.post(url, json=request_data, headers=headers, timeout=10)
-            print(resp)
+            print("Raw response:", resp)
             resp.raise_for_status()
-            return resp.json(), resp.status_code
+            response_json = resp.json()
+            print("Response JSON:", response_json)
+            return response_json
         except requests.RequestException as e:
+            print("Request failed:", str(e))
             return {"error": f"Connection failed: {str(e)}"}
         except json.JSONDecodeError:
+            print("Invalid JSON response")
             return {"error": "Invalid JSON response from aggregator"}
+
 
 
 class GetBalance:

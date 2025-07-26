@@ -39,20 +39,20 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
         if total_amount <= 0:
             return JsonResponse({"status": "error", "message": "Total amount must be greater than zero."}, status=400)
 
-        bill, bill_status_code = PrepaidBill()
+        bill = PrepaidBill()
         bill_response = bill.get_bill(
             trader_id=trader_id,
             amount=int(total_amount * 100),
             channel=channel,
             transaction_type=t_type
         )
-        print("Bill Response:", bill_response, "Status Code:", bill_status_code)
+        print("Bill Response:", bill_response)
         if "error" in bill_response:
             return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
 
         with transaction.atomic():
             response = PrepaidBillResponse(
-                status_code=bill_status_code,
+                status_code=bill_response.get("status_code", 0),
                 succeeded=bill_response.get("succeeded"),
                 errors=bill_response.get("errors"),
                 extras=bill_response.get("extras"),
