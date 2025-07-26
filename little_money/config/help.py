@@ -47,7 +47,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             channel=channel,
             transaction_type=t_type
         )
-        print("Bill Response:", bill_response)
+        print("RAW bill_response (pre-save):", repr(bill_response))
         if "error" in bill_response:
             return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
 
