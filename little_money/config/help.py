@@ -56,12 +56,12 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 succeeded=bill_response.get("succeeded"),
                 errors=bill_response.get("errors"),
                 extras=bill_response.get("extras"),
-                timestamp=bill_response.get("timestamp", int(time.time())),
-                trader_id=bill_response.get("trader_id", trader_id),
-                full_name=bill_response.get("full_name", name),
+                timestamp=bill_response["Data"].get("timestamp", int(time.time())),
+                trader_id=bill_response["Data"].get("trader_id", trader_id),
+                full_name=bill_response["Data"].get("full_name", name),
                 amount=base_amount,
-                service_charge=bill_response.get("service_charge", Decimal('0.00')),
-                service_charge_rate=bill_response.get("service_charge_rate", Decimal('0.00')),
+                service_charge=bill_response["Data"].get("service_charge", Decimal('0.00')),
+                service_charge_rate=bill_response["Data"].get("service_charge_rate", Decimal('0.00')),
             )
             response.save()
 
