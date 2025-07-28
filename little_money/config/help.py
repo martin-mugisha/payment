@@ -64,7 +64,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 succeeded=bill_response.get("Succeeded"),
                 errors=bill_response.get("Errors"),
                 extras=bill_response.get("Extras"),
-                timestamp=data.get("Timestamp", int(time.time())),
+                timestamp=bill_response.get("Timestamp", int(time.time())),
                 trader_id=data.get("TraderID", trader_id),
                 full_name=data.get("FullName", name),
                 amount=base_amount,

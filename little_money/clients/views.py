@@ -129,6 +129,7 @@ def payments(request):
 
     if request.method == 'POST':
         if 'single_payment' in request.POST:
+            print(request.POST)  
             try:
                 name = request.POST.get('name')
                 phone = request.POST.get('phone')

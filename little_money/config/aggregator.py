@@ -11,7 +11,6 @@ apikey = settings.PAYMENT_AGGREGATOR_API_KEY
 notifyurl = settings.PAYMENT_AGGREGATOR_WEBHOOK_URL
 base_url = settings.PAYMENT_AGGREGATOR_BASE_URL
 
-
 class UnifiedOrder:
     def __init__(self):
         pass
@@ -33,7 +32,11 @@ class UnifiedOrder:
             "Description": message,
             "NotifyUrl": notifyurl,
         }
-        request_data["Sign"] = generate_signature(request_data, apikey)
+        field_order = [
+            "Version", "MchID", "TimeStamp", "Channel", "OutTradeNo", "Amount",
+            "TransactionType", "TraderID", "TraderFullName", "Description", "NotifyUrl"
+        ]
+        request_data["Sign"] = generate_signature(request_data,field_order,apikey)
 
         url = f"{base_url}/unifiedorder"
         headers = {
@@ -74,7 +77,9 @@ class PaymentResults:
             "TimeStamp": timestamp,
             "OutTradeNo": unique_id,
         }
-        request_data["Sign"] = generate_signature(request_data, apikey)
+
+        field_order =["Version","MchID", "TimeStamp", "OutTradeNo"]
+        request_data["Sign"] = generate_signature(request_data, field_order, apikey)
 
         url = f"{base_url}/orderquery"
         headers = {
@@ -155,7 +160,8 @@ class PrepaidBill:
             "TraderID": trader_id,
             "Amount": amount
         }
-        request_data["Sign"] = generate_signature(request_data, apikey)
+        field_order = ["Version", "MchID", "TimeStamp", "Channel", "TransactionType", "TraderID", "Amount"]
+        request_data["Sign"] = generate_signature(request_data,field_order, apikey)
 
         print("Request payload:", request_data)
         url = f"{base_url}/bill"
@@ -173,7 +179,8 @@ class PrepaidBill:
 
         try:
             resp = requests.post(url, json=request_data, headers=headers, timeout=10)
-            print("Raw response:", resp)
+            print("Status:", resp.status_code)
+            print("Text:", resp.text)
             resp.raise_for_status()
             response_json = resp.json()
             print("Response JSON:", response_json)
@@ -198,7 +205,8 @@ class GetBalance:
             "MchID": merchant_id,
             "TimeStamp": timestamp
         }
-        request_data["Sign"] = generate_signature(request_data, apikey)
+        field_order=["Version","MchID", "TimeStamp"]
+        request_data["Sign"] = generate_signature(request_data, field_order, apikey)
 
         url = f"{base_url}/balance"
         headers = {
@@ -235,8 +243,8 @@ class GetStatementOfAccount:
             request_data["StartTime"] = start_date
         if end_date:
             request_data["EndTime"] = end_date
-
-        request_data["Sign"] = generate_signature(request_data, apikey)
+        field_order= ["Version","MchID","TimeStamp","StartTime","EndTime"]
+        request_data["Sign"] = generate_signature(request_data,field_order, apikey)
 
 
         url = f"{base_url}/statement"
@@ -257,4 +265,4 @@ class GetStatementOfAccount:
         except requests.RequestException as e:
             return {"error": f"Connection failed: {str(e)}"}
         except json.JSONDecodeError:
-            return {"error": "Invalid JSON response from aggregator"}
+            return {"error": "Invalid JSON response from aggregator"}"

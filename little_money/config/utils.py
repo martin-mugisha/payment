@@ -2,6 +2,7 @@ import secrets
 import string
 import hashlib
 import json
+import time
 from typing import Dict, Any
 from jsonschema import validate, ValidationError
 from datetime import datetime
@@ -10,14 +11,14 @@ import pytz
 # Global counter
 sequence_counter = 0
 
-def generate_signature(data_dict: Dict[str, Any], private_key: str) -> str:
+def generate_signature(params, field_order, private_key) -> str:
     """
-    Generates an MD5 signature string from sorted fields plus the private key.
+    Generates an MD5 signature string from strictly ordered stringified fields plus the private key.
     """
-    keys = sorted(k for k in data_dict.keys() if k != 'Sign')
-    raw_string = "&".join(f"{k}={data_dict[k]}" for k in keys)
-    raw_string += f"&privateKey={private_key}"
-    return hashlib.md5(raw_string.encode('utf-8')).hexdigest()
+    to_sign = '&'.join(f"{k}={str(params[k])}" for k in field_order if k in params)
+    to_sign += f"&privateKey={private_key}"
+    return hashlib.md5(to_sign.encode('utf-8')).hexdigest()
+
 
 
 def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
@@ -93,13 +94,7 @@ def generate_transaction_id(length=12):
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 def generate_timestamp():
-    # East African Time timezone
-    east_africa_tz = pytz.timezone('Africa/Nairobi')  # Nairobi is in EAT timezone
-    # Get current time in UTC and convert to East African Time
-    current_time_eat = datetime.now(tz=pytz.utc).astimezone(east_africa_tz)
-    # Get the Unix timestamp (seconds since epoch)
-    timestamp = int(current_time_eat.timestamp())
-    return timestamp
+    return int(time.time())
 
 def generate_unique_id():
     global sequence_counter
