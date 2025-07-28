@@ -47,8 +47,8 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             "Data": {
                 "TraderID": trader_id,
                 "FullName": name,
-                "ServiceCharge": Decimal('0.00'),
-                "ServiceChargeRate": Decimal('0.00'),
+                "ServiceCharge": float(Decimal('0.00')),
+                "ServiceChargeRate": float(Decimal('0.00')),
             },
             "Errors": None,
             "Extras": {},
