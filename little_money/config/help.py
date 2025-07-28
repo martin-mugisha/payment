@@ -39,7 +39,8 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
 
         if total_amount <= 0:
             return JsonResponse({"status": "error", "message": "Total amount must be greater than zero."}, status=400)
-
+        
+        print(">>> SKIPPING PrepaidBill.get_bill() and using mock data")
         bill_response = {
             "StatusCode": 200,
             "Succeeded": True,
@@ -53,8 +54,8 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             "Extras": {},
             "Timestamp": int(time.time())
         }
-        if "error" in bill_response:
-            return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
+
+        print("BILL RESPONSE MOCKED:", bill_response)
 
         with transaction.atomic():
             data = bill_response.get("Data")
