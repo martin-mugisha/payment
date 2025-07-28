@@ -47,17 +47,16 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             channel=channel,
             transaction_type=t_type
         )
-        print("RAW bill_response (pre-save):", repr(bill_response))
         if "error" in bill_response:
             return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
 
         with transaction.atomic():
             data = bill_response.get("Data")
-            if not isinstance(data, dict):
+            """if not isinstance(data, dict):
                 return JsonResponse({
                     "status": "error",
                     "message": "Invalid or missing 'Data' in bill response."
-                }, status=500)
+                }, status=500)"""
 
             response = PrepaidBillResponse(
                 status_code=bill_response.get("StatusCode", 0),

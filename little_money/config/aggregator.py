@@ -162,8 +162,6 @@ class PrepaidBill:
         }
         field_order = ["Version", "MchID", "TimeStamp", "Channel", "TransactionType", "TraderID", "Amount"]
         request_data["Sign"] = generate_signature(request_data,field_order, apikey)
-
-        print("Request payload:", request_data)
         url = f"{base_url}/bill"
         headers = {'Content-Type': 'application/json'}
         
@@ -174,16 +172,12 @@ class PrepaidBill:
             trader_id=trader_id,
             amount=amount
         )
-        print("Saving PrepaidBillRequest object:", get_bill_request)
         get_bill_request.save()
 
         try:
             resp = requests.post(url, json=request_data, headers=headers, timeout=10)
-            print("Status:", resp.status_code)
-            print("Text:", resp.text)
             resp.raise_for_status()
             response_json = resp.json()
-            print("Response JSON:", response_json)
             return response_json
         except requests.RequestException as e:
             print("Request failed:", str(e))

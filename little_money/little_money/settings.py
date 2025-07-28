@@ -172,32 +172,23 @@ CSRF_TRUSTED_ORIGINS = [
     'https://mangupay.tech',
 ]
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-    },
     'handlers': {
-        'file': {
+        'gunicorn_error_file': {
             'level': 'ERROR',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'error_app.log'),
-            'formatter': 'verbose',
+            'filename': '/home/ubuntu/payment/error.log',
         },
     },
     'root': {
-        'handlers': ['file'],
+        'handlers': ['gunicorn_error_file'],
         'level': 'ERROR',
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
+            'handlers': ['gunicorn_error_file'],
             'level': 'ERROR',
             'propagate': True,
         },
