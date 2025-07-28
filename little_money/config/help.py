@@ -39,23 +39,16 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
 
         if total_amount <= 0:
             return JsonResponse({"status": "error", "message": "Total amount must be greater than zero."}, status=400)
-        
-        print(">>> SKIPPING PrepaidBill.get_bill() and using mock data")
-        bill_response = {
-            "StatusCode": 200,
-            "Succeeded": True,
-            "Data": {
-                "TraderID": trader_id,
-                "FullName": name,
-                "ServiceCharge": float(Decimal('0.00')),
-                "ServiceChargeRate": float(Decimal('0.00')),
-            },
-            "Errors": None,
-            "Extras": {},
-            "Timestamp": int(time.time())
-        }
 
-        print("BILL RESPONSE MOCKED:", bill_response)
+        bill = PrepaidBill()
+        bill_response = bill.get_bill(
+            trader_id=trader_id,
+            amount=int(total_amount * 100),
+            channel=channel,
+            transaction_type=t_type
+        )
+        if "error" in bill_response:
+            return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
 
         with transaction.atomic():
             data = bill_response.get("Data")
@@ -94,8 +87,6 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 name=name,
                 message=message
             )
-
-            print(">>> unifiedorder_response =", unifiedorder_response)
 
             uni_res = UnifiedOrderResponse(
                 status_code=unifiedorder_response.get("StatusCode", 0),
@@ -156,8 +147,6 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                         break
                     attempt += 1
                     time.sleep(1)
-
-                print(">>> query_response =", query_response)
 
                 if query_response.get("StatusCode") != 200 or not query_response.get("Succeeded"):
                     return JsonResponse({"status": "error", "message": query_response.get("Errors", "Unknown error")}, status=500)
