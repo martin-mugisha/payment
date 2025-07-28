@@ -265,4 +265,4 @@ class GetStatementOfAccount:
         except requests.RequestException as e:
             return {"error": f"Connection failed: {str(e)}"}
         except json.JSONDecodeError:
-            return {"error": "Invalid JSON response from aggregator"}"
+            return {"error": "Invalid JSON response from aggregator"}
