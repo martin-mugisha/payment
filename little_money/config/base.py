@@ -21,7 +21,7 @@ if not PAYMENT_AGGREGATOR_BASE_URL:
 PAYMENT_AGGREGATOR_WEBHOOK_SECRET = os.getenv("AGGREGATOR_WEBHOOK_SECRET")
 PAYMENT_AGGREGATOR_WEBHOOK_URL = os.getenv(
     "AGGREGATOR_WEBHOOK_URL",
-    "https://yourdomain.com/webhooks/aggregator"
+    "https://mangupay.tech/webhooks/aggregator"
 )
 if not PAYMENT_AGGREGATOR_WEBHOOK_SECRET:
     raise ValueError("AGGREGATOR_WEBHOOK_SECRET is required but not set.")  
