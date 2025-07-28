@@ -80,7 +80,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
 
 
             unifiedorder = UnifiedOrder()
-            unifiedorder_response = unifiedorder.create_order(
+            unifiedorder_response, status_code= unifiedorder.create_order(
                 trader_id=trader_id,
                 amount=int(total_amount * 100),
                 channel=channel,
@@ -88,7 +88,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 name=name,
                 message=message
             )
-
+            print("unified response:",unifiedorder_response)
             uni_res = UnifiedOrderResponse(
                 status_code=unifiedorder_response.get("StatusCode", 0),
                 succeeded=unifiedorder_response.get("Succeeded", False),
