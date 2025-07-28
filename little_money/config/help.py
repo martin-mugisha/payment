@@ -95,6 +95,8 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 message=message
             )
 
+            print(">>> unifiedorder_response =", unifiedorder_response)
+
             uni_res = UnifiedOrderResponse(
                 status_code=unifiedorder_response.get("StatusCode", 0),
                 succeeded=unifiedorder_response.get("Succeeded", False),
@@ -154,6 +156,8 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                         break
                     attempt += 1
                     time.sleep(1)
+
+                print(">>> query_response =", query_response)
 
                 if query_response.get("StatusCode") != 200 or not query_response.get("Succeeded"):
                     return JsonResponse({"status": "error", "message": query_response.get("Errors", "Unknown error")}, status=500)
