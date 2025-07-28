@@ -77,18 +77,18 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             if response.status_code != 200:
                 error_message = response.errors or "Bill request failed with unknown error."
                 return JsonResponse({"status": "error", "message": error_message}, status=400)
-
-
+            
             unifiedorder = UnifiedOrder()
             unifiedorder_response, status_code= unifiedorder.create_order(
                 trader_id=trader_id,
                 amount=int(total_amount * 100),
                 channel=channel,
                 transaction_type=t_type,
-                name=name,
+                name=data.get("FullName"),
                 message=message
             )
             print("unified response:",unifiedorder_response)
+            print("status:", status_code)
             uni_res = UnifiedOrderResponse(
                 status_code=unifiedorder_response.get("StatusCode", 0),
                 succeeded=unifiedorder_response.get("Succeeded", False),
