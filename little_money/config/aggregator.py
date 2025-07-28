@@ -52,7 +52,6 @@ class UnifiedOrder:
             trader_id=trader_id,
             trader_full_name=name,
             description=message,
-            notify_url=notifyurl
         )
         order.save()
         try:
