@@ -279,11 +279,11 @@ def accounts(request):
         if payment_method not in ['MTN', 'Airtel']:
             messages.error(request, 'Invalid payment method selected.')
         else:
-            from decimal import Decimal
-            amount_decimal = Decimal(amount)
+            map_channel = {'MTN': 1, 'Airtel': 2}
+            channel = map_channel[payment_method]
             message = f"Collecttion for {name}"
             result = process_transaction(
-                            channel=payment_method,
+                            channel=channel,
                             t_type=1,
                             client_id=client.id,
                             base_amount=int(amount),
@@ -296,7 +296,7 @@ def accounts(request):
                 RecentTransaction.objects.create(
                     client=client,
                     date=now().date(),
-                    amount=amount_decimal,
+                    amount=Decimal(amount),
                     recipient=name,
                     phone=phone,
                 )
