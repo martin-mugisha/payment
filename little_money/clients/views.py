@@ -286,7 +286,7 @@ def accounts(request):
                             channel=payment_method,
                             t_type=1,
                             client_id=client.id,
-                            base_amount=amount,
+                            base_amount=int(amount),
                             trader_id=phone,
                             message=message,
                             name=name
