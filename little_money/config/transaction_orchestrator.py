@@ -39,7 +39,7 @@ def initiate_payment_process(channel: int, t_type: int, client_id: int, base_amo
             channel=channel,
             t_type=t_type,
             client_id=client_id,
-            base_amount=base_amount, # Pass original int base_amount
+            base_amount=total_amount, # Pass original int base_amount
             trader_id=trader_id,
             message=message,
             name=name

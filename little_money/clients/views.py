@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 
-from config.transaction_orchestrator import handle_full_transaction
+from config.transaction_orchestrator import initiate_payment_process
 from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry, DailyPayment
 from django.utils.timezone import now, localdate
 from core.utils import is_client
@@ -155,7 +155,7 @@ def payments(request):
                 if amount_decimal > finances.balance:
                     messages.error(request, f'Disbursement amount {amount} exceeds available balance {finances.balance}. Transaction cancelled.')
                     return redirect('client:payments')
-                response = handle_full_transaction(
+                response = initiate_payment_process(
                     channel=channel,
                     t_type=2,
                     client_id=client.id,
@@ -229,7 +229,7 @@ def payments(request):
                         trader_id = client.trader_id if hasattr(client, 'trader_id') else str(client.id)
                         message = f"Disbursement for {name} ({phone})"
 
-                        result = handle_full_transaction(
+                        result = initiate_payment_process(
                             channel=channel,
                             t_type=2,
                             client_id=client.id,
@@ -304,7 +304,7 @@ def accounts(request):
                 return redirect('client:accounts')
 
             # Call the orchestrator function
-            result_response = handle_full_transaction( # Renamed variable to avoid confusion
+            result_response = initiate_payment_process( # Renamed variable to avoid confusion
                             channel=channel,
                             t_type=1, # Collection type
                             client_id=client.id,
