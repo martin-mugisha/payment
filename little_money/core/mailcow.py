@@ -1,8 +1,12 @@
 import requests
+from config import base as settings
+MAILCOW_API_URL = 'https://mail.mangupay.tech/api/v1'  # replace with actual URL
+MAILCOW_DOMAIN = 'mangupay.tech'  # replace with your actual domain
 
-MAILCOW_API_URL = 'https://your.mailcow.host/api/v1'
-MAILCOW_API_KEY = 'your-mailcow-api-key'
-MAILCOW_DOMAIN = 'yourdomain.com'  # Example: 'example.com'
+# Store credentials securely in Django settings
+MAILCOW_ADMIN_EMAIL = settings.MAILCOW_ADMIN_EMAIL
+MAILCOW_ADMIN_PASSWORD = settings.MAILCOW_ADMIN_PASSWORD
+MAILCOW_API_KEY = settings.MAILCOW_API_KEY
 
 def sync_mailcow_mailbox(user, password):
     if user.role not in ['staff', 'admin']:
@@ -26,17 +30,22 @@ def sync_mailcow_mailbox(user, password):
 
     if mailbox_exists:
         # Update existing mailbox password
-        requests.post(
+        update_response = requests.post(
             f"{MAILCOW_API_URL}/edit/mailbox",
             headers=headers,
             json={
                 "items": [email],
-                "attr": {"password": password}
+                "attr": {
+                    "password": password,
+                    "password2": password,
+                    "force_pw_update": "1"
+                }
             }
         )
+        update_response.raise_for_status()
     else:
         # Create new mailbox
-        requests.post(
+        create_response = requests.post(
             f"{MAILCOW_API_URL}/add/mailbox",
             headers=headers,
             json={
@@ -44,7 +53,12 @@ def sync_mailcow_mailbox(user, password):
                 "local_part": user.username,
                 "name": f"{user.first_name} {user.last_name}",
                 "password": password,
-                "quota": 2048,  # in MB
-                "active": 1
+                "password2": password,
+                "quota": "2048",  # in MB
+                "active": "1",
+                "force_pw_update": "1",
+                "tls_enforce_in": "1",
+                "tls_enforce_out": "1"
             }
         )
+        create_response.raise_for_status()

@@ -24,4 +24,13 @@ PAYMENT_AGGREGATOR_WEBHOOK_URL = os.getenv(
     "https://mangupay.tech/webhooks/payment-notification/"
 )
 if not PAYMENT_AGGREGATOR_WEBHOOK_SECRET:
-    raise ValueError("AGGREGATOR_WEBHOOK_SECRET is required but not set.")  
+    raise ValueError("AGGREGATOR_WEBHOOK_SECRET is required but not set.")
+MAILCOW_ADMIN_EMAIL = os.getenv('MAILCOW_ADMIN_EMAIL')
+if not MAILCOW_ADMIN_EMAIL:
+    raise ValueError("MAILCOW_ADMIN_EMAIL is required but not set.")
+MAILCOW_ADMIN_PASSWORD = os.getenv('MAILCOW_ADMIN_PASSWORD')  
+if not MAILCOW_ADMIN_PASSWORD:
+    raise ValueError("AILCOW_ADMIN_PASSWORD is required but not set.")
+MAILCOW_API_KEY = os.getenv("MAILCOW_API_KEY")
+if not MAILCOW_API_KEY:
+    raise ValueError("MAILCOW_API_KEY is required but not set.")
