@@ -6,6 +6,6 @@ class ConfigConfig(AppConfig):
     name = 'config'
 
     def ready(self):
-        from .signals import earnings_signals, auth_signals
+        from .signals import auth_signals
         # Ensure signals are imported when the app is ready
         # This will register the signal handlers defined in config/signals.py   
