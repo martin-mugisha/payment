@@ -291,8 +291,6 @@ def accounts(request):
                             message=message,
                             name=name
                         )
-            print(result)
-            print('Error:', result['message'])
             if result.status_code == 200:
                 # Record the fund addition as a RecentTransaction with transaction_type 'collection'
                 RecentTransaction.objects.create(

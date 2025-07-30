@@ -180,4 +180,5 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
         return JsonResponse({"status": "success"})
 
     except Exception as e:
+        print(e)
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
