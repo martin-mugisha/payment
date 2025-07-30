@@ -292,6 +292,7 @@ def accounts(request):
                             name=name
                         )
             print(result)
+            print(result.json)
             if result.status_code == 200:
                 # Record the fund addition as a RecentTransaction with transaction_type 'collection'
                 RecentTransaction.objects.create(
