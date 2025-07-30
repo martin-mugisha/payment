@@ -16,6 +16,7 @@ from .views import (
     activity_logs,
     finance_dashboard,
     force_password_change_view,
+    webhook,
 )
 
 app_name = 'admins'
@@ -37,4 +38,5 @@ urlpatterns = [
     path('finance/', finance_dashboard, name='finance_dashboard'),
     path('delete-staff-user/<int:user_id>/', staff_user_delete, name='delete_staff_user'),
     path('force-password-change/', force_password_change_view, name='force_password_change'),
+    path('webhook-result', webhook, name='webhook_result'),
 ]

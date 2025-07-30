@@ -4,6 +4,7 @@ from decimal import Decimal
 from clients.models import Client, RecentTransaction
 from config.aggregator import GetBalance
 from core.mailcow import sync_mailcow_mailbox
+from webhooks.models import PaymentNotification
 from .models import AdminCommissionHistory, AuthLog
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
@@ -21,8 +22,7 @@ from core.utils import is_admin
 from django.shortcuts import render
 from django.utils.timezone import localtime
 from finance.models import SystemEarnings
-from django.db import models
-from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
 
 # Admin Dashboard View
 @login_required
@@ -376,3 +376,20 @@ def activity_logs(request):
     client_logs = sorted(client_logs, key=lambda x: x.timestamp if hasattr(x, 'timestamp') else x.action_time, reverse=True)
 
     return render(request, 'dashboard/activity_logs.html', {'staff_logs': staff_logs, 'client_logs': client_logs})
+
+@login_required
+@user_passes_test(is_admin)
+def webhook(request):
+    notifications = PaymentNotification.objects.order_by('-received_at')
+    
+    paginator = Paginator(notifications, 20)  # Show 20 per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Example: If you have orders linked by OutTradeNo, you can do joins here
+    # Or just pass notifications to template for admins to review
+    
+    context = {
+        'notifications': page_obj,
+    }
+    return render(request, 'dashboard/webhooklist.html', context)

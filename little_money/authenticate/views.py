@@ -7,6 +7,19 @@ def index(request):
 
 # Login View
 def user_login(request):
+    # If user is already authenticated (session active), redirect to their dashboard
+    if request.user.is_authenticated:
+        if request.user.role == 'admin':
+            return redirect('admins:admin_dashboard')
+        elif request.user.role == 'staff':
+            return redirect('staff:summary_dashboard')
+        elif request.user.role == 'client':
+            return redirect('client:overview_dashboard')
+        else:
+            messages.error(request, "Unauthorized user.")
+            logout(request)
+            return redirect('authenticate:login')
+
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
@@ -25,6 +38,7 @@ def user_login(request):
         else:
             messages.error(request, "Invalid credentials.")
     return render(request, 'login.html')
+
 
 # Logout View
 def user_logout(request):

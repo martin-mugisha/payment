@@ -20,21 +20,32 @@ def generate_signature(params, field_order, private_key) -> str:
     return hashlib.md5(to_sign.encode('utf-8')).hexdigest()
 
 
-
-def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
-    """
-    Reconstructs the string to sign, hashes it using MD5, and compares with the received Sign.
-    """
-    received_sign = data.get("Sign", "")
-    if not received_sign:
-        return False
-
-    keys = sorted(k for k in data.keys() if k != 'Sign')
-    raw_string = "&".join(f"{k}={data[k]}" for k in keys)
-    raw_string += f"&privateKey={private_key}"
-
-    generated_sign = hashlib.md5(raw_string.encode("utf-8")).hexdigest()
-    return generated_sign == received_sign
+def verify_signature(data: dict, private_key: str) -> bool:
+    fields = [
+        'PayStatus',
+        'PayTime',
+        'OutTradeNo',
+        'TransactionId',
+        'Amount',
+        'ActualPaymentAmount',
+        'ActualCollectAmount',
+        'PayerCharge',
+        'PayeeCharge',
+        # 'PayMessage' # excluded
+    ]
+    
+    concat_str = ""
+    for field in fields:
+        value = data.get(field)
+        # Handle None values as empty strings
+        if value is None:
+            value = ""
+        concat_str += str(value)
+    concat_str += private_key
+    
+    md5_hash = hashlib.md5(concat_str.encode('utf-8')).hexdigest()
+    
+    return md5_hash == data.get('Sign')
 
 
 def validate_signature(request_data, private_key):

@@ -1,0 +1,48 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block content %}
+<h1>Payment Notifications</h1>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Order Number</th>
+            <th>Status</th>
+            <th>Transaction ID</th>
+            <th>Amount</th>
+            <th>Payment Time</th>
+            <th>Processed</th>
+            <th>Received At</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for notification in notifications %}
+        <tr>
+            <td>{{ notification.out_trade_no }}</td>
+            <td>{{ notification.get_pay_status_display }}</td>
+            <td>{{ notification.transaction_id }}</td>
+            <td>{{ notification.amount }}</td>
+            <td>{{ notification.pay_time }}</td>
+            <td>{{ notification.processed }}</td>
+            <td>{{ notification.received_at }}</td>
+            <td><a href="{% url 'order_detail' notification.out_trade_no %}">View Order</a></td>
+            <!-- Replace 'order_detail' and URL param as per your order app -->
+        </tr>
+    {% empty %}
+        <tr><td colspan="8">No notifications found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<div>
+    <span>Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}</span>
+    {% if notifications.has_previous %}
+        <a href="?page={{ notifications.previous_page_number }}">Previous</a>
+    {% endif %}
+    {% if notifications.has_next %}
+        <a href="?page={{ notifications.next_page_number }}">Next</a>
+    {% endif %}
+</div>
+
+{% endblock %}
