@@ -1,53 +1,27 @@
 from decimal import Decimal
-import json
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
-from django.db import transaction
-from admins.models import AdminCommissionHistory, AdminProfile
-from core.models import CustomUser
+from django.db import transaction # Import transaction
 from .models import PrepaidBillResponse, UnifiedOrderResponse, OrderQueryResponse
-from .Platform import PlatformEarnings
 from .aggregator import PaymentResults, PrepaidBill, UnifiedOrder
-from clients.models import Client, Finances
-from staff.models import Balance, ClientAssignment, StaffCommissionHistory
-from finance.models import StaffCommissionAggregate, SystemEarnings
+from clients.models import Client
+from finance.models import SystemEarnings
 import time
 
 def process_transaction(channel: int, t_type: int, client_id: int, base_amount: int, trader_id: str, message: str, name: str):
     try:
         client = get_object_or_404(Client, id=client_id)
-        assignment = ClientAssignment.objects.filter(client=client).first()
-        staff = assignment.staff if assignment else None
+        base_amount_decimal = Decimal(base_amount) # Convert to Decimal early
 
-        commission_record = StaffCommissionHistory.objects.order_by('-created_at').first()
-        commission_percent = Decimal(str(commission_record.percentage)) if commission_record else Decimal("25.0")
-
-        admin_commission_record = AdminCommissionHistory.objects.order_by('-created_at').first()
-        admin_commission_percent = Decimal(str(admin_commission_record.percentage)) if admin_commission_record else Decimal("10.0")
-
-        system = SystemEarnings.load()
-        charge = PlatformEarnings()
-
-        fee = charge.calculate_platform_fee(base_amount)
-        fee = Decimal(str(fee))  # ensure it's a Decimal
-
-        total_amount = Decimal(base_amount) + fee
-
-        staff_commission = (fee * commission_percent / Decimal("100.0")) if staff else Decimal("0.0")
-        admin_commission_total = (fee - staff_commission) * admin_commission_percent / Decimal("100.0")
-        platform_profit = fee - staff_commission - admin_commission_total
-
-        if total_amount <= 0:
-            return JsonResponse({"status": "error", "message": "Total amount must be greater than zero."}, status=400)
-
+        # --- PrepaidBill Logic ---
         bill = PrepaidBill()
         bill_response = bill.get_bill(
             trader_id=trader_id,
-            amount=int(total_amount * 100),
+            amount=int(base_amount_decimal * 100), # Use decimal version for multiplication
             channel=channel,
             transaction_type=t_type
         )
-        print("bill response: ", bill_response)
+
         if "error" in bill_response:
             return JsonResponse({"status": "error", "message": bill_response["error"]}, status=500)
 
@@ -58,7 +32,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
                 "message": "Invalid or missing 'Data' in bill response."
             }, status=500)
 
-        response = PrepaidBillResponse(
+        prepaid_bill_resp_obj = PrepaidBillResponse(
             status_code=bill_response.get("StatusCode", 0),
             succeeded=bill_response.get("Succeeded"),
             errors=bill_response.get("Errors"),
@@ -66,29 +40,28 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             timestamp=bill_response.get("Timestamp", int(time.time())),
             trader_id=data.get("TraderID", trader_id),
             full_name=data.get("FullName", name),
-            amount=base_amount,
-            service_charge=data.get("ServiceCharge", Decimal('0.00')),
-            service_charge_rate=data.get("ServiceChargeRate", Decimal('0.00')),
+            amount=base_amount_decimal,
+            service_charge=Decimal(str(data.get("ServiceCharge", '0.00'))),
+            service_charge_rate=Decimal(str(data.get("ServiceChargeRate", '0.00'))),
         )
-        print("Bill response:", json.dumps(bill_response, indent=2))
-        response.save()
+        prepaid_bill_resp_obj.save()
 
-        if response.status_code != 200:
-            error_message = response.errors or "Bill request failed with unknown error."
+        if prepaid_bill_resp_obj.status_code != 200:
+            error_message = prepaid_bill_resp_obj.errors or "Bill request failed with unknown error."
             return JsonResponse({"status": "error", "message": error_message}, status=400)
-        
+
+        # --- UnifiedOrder Logic ---
         unifiedorder = UnifiedOrder()
-        unifiedorder_response, status_code= unifiedorder.create_order(
+        unifiedorder_response, _ = unifiedorder.create_order( # status_code is returned but not used
             trader_id=trader_id,
-            amount=int(total_amount * 100),
+            amount=int(base_amount_decimal * 100), # Use decimal version
             channel=channel,
             transaction_type=t_type,
             name=data.get("FullName"),
             message=message
         )
-        print("unified response:",unifiedorder_response)
-        print("status:", status_code)
-        uni_res = UnifiedOrderResponse(
+
+        unified_order_resp_obj = UnifiedOrderResponse(
             status_code=unifiedorder_response.get("StatusCode", 0),
             succeeded=unifiedorder_response.get("Succeeded", False),
             errors=unifiedorder_response.get("Errors"),
@@ -96,89 +69,73 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             timestamp=unifiedorder_response.get("Timestamp", int(time.time())),
             out_trade_no=unifiedorder_response["Data"].get("OutTradeNo", "100000006"),
             transaction_id=unifiedorder_response["Data"].get("TransactionId", "100000006"),
-            amount=unifiedorder_response["Data"].get("Amount", base_amount),
-            actual_payment_amount=unifiedorder_response["Data"].get("ActualPaymentAmount", total_amount),
-            actual_collect_amount=unifiedorder_response["Data"].get("ActualCollectAmount", total_amount),
-            payer_charge=unifiedorder_response["Data"].get("PayerCharge", Decimal('0.00')),
-            payee_charge=unifiedorder_response["Data"].get("PayeeCharge", Decimal('0.00')),
-            channel_charge=unifiedorder_response["Data"].get("ChannelCharge", Decimal('0.00')),
+            amount=Decimal(str(unifiedorder_response["Data"].get("Amount", base_amount_decimal))),
+            actual_payment_amount=Decimal(str(unifiedorder_response["Data"].get("ActualPaymentAmount", base_amount_decimal))), # Consistent
+            actual_collect_amount=Decimal(str(unifiedorder_response["Data"].get("ActualCollectAmount", base_amount_decimal))), # Consistent
+            payer_charge=Decimal(str(unifiedorder_response["Data"].get("PayerCharge", '0.00'))),
+            payee_charge=Decimal(str(unifiedorder_response["Data"].get("Payee_Charge", '0.00'))),
+            channel_charge=Decimal(str(unifiedorder_response["Data"].get("ChannelCharge", '0.00'))),
             client=client
         )
-        uni_res.save()
+        unified_order_resp_obj.save()
 
-        system.total_transactions += 1
+        transaction_succeeded = False # Flag to track overall success for system earnings
 
-        if unifiedorder_response.get("StatusCode") == 200:
-            print("API call succeeded. Starting database updates...")
-    
-            if staff:
-                print("Staff is assigned. Updating staff balance...")
-                staff_balance, created = Balance.objects.get_or_create(staff=staff)
-                print(f"Got or created staff balance: {staff_balance}. Created: {created}")
-                staff_balance.balance += staff_commission
-                staff_balance.save()
-                print("Staff balance saved.")
-
-            print("Updating client balance...")
-            client_finance, _ = Finances.objects.get_or_create(client=client)
-            client_finance.balance += Decimal(base_amount)
-            client_finance.save()
-            print("Client balance saved.")
-            print("Updating admin balances...")
-            admins = CustomUser.objects.filter(role='admin')
-            num_admins = admins.count()
-            if num_admins > 0:
-                share = admin_commission_total / num_admins
-                for admin in admins:
-                    admin.profile.balance += share
-                    admin.profile.save()
-
-            system.total_earnings += platform_profit
-            system.total_volume += base_amount
-            system.total_successful_transactions += 1
-            system.save()
-            print("System earnings saved.")
-
+        if unified_order_resp_obj.status_code == 200:
+            print("Unified order API call succeeded immediately.")
+            transaction_succeeded = True
         else:
-            system.total_transactions += 1
+            print("Unified order API call failed initially. Attempting retry via query...")
             max_attempts = 3
             attempt = 0
             query_response = None
             while attempt < max_attempts:
                 query_result = PaymentResults()
-                query_response = query_result.get_result(unifiedorder_response["Data"]["OutTradeNo"])
-                if query_response.get("StatusCode") == 200 and query_response.get("Succeeded"):
+                query_response = query_result.get_result(unified_order_resp_obj.out_trade_no) # Use saved OutTradeNo
+                if query_response and query_response.get("StatusCode") == 200 and query_response.get("Succeeded"):
+                    transaction_succeeded = True
                     break
                 attempt += 1
                 time.sleep(1)
 
-            if query_response.get("StatusCode") != 200 or not query_response.get("Succeeded"):
-                return JsonResponse({"status": "error", "message": query_response.get("Errors", "Unknown error")}, status=500)
-
-            qu_res = OrderQueryResponse(
-                status_code=query_response.get("StatusCode"),
-                succeeded=query_response.get("Succeeded", False),
-                errors=query_response.get("Errors"),
-                extras=query_response.get("Extras"),
-                timestamp=query_response.get("Timestamp", int(time.time())),
-                pay_status=query_response["Data"].get("PayStatus"),
-                pay_time=query_response["Data"].get("PayTime"),
-                out_trade_no=query_response["Data"].get("OutTradeNo"),
-                transaction_id=query_response["Data"].get("TransactionId", "100000006"),
-                amount=query_response["Data"].get("Amount", base_amount),
-                actual_payment_amount=query_response["Data"].get("ActualPaymentAmount", total_amount),
-                actual_collect_amount=query_response["Data"].get("ActualCollectAmount", total_amount),
-                payer_charge=query_response["Data"].get("PayerCharge", Decimal('0.00')),
-                payee_charge=query_response["Data"].get("PayeeCharge", Decimal('0.00')),
-                pay_message=query_response["Data"].get("PayMessage", "")
+            order_query_resp_obj = OrderQueryResponse(
+                status_code=query_response.get("StatusCode") if query_response else 0,
+                succeeded=query_response.get("Succeeded", False) if query_response else False,
+                errors=query_response.get("Errors") if query_response else "No query response",
+                extras=query_response.get("Extras") if query_response else {},
+                timestamp=query_response.get("Timestamp", int(time.time())) if query_response else int(time.time()),
+                pay_status=query_response["Data"].get("PayStatus") if query_response and "Data" in query_response else None,
+                pay_time=query_response["Data"].get("PayTime") if query_response and "Data" in query_response else None,
+                out_trade_no=query_response["Data"].get("OutTradeNo", unified_order_resp_obj.out_trade_no) if query_response and "Data" in query_response else unified_order_resp_obj.out_trade_no,
+                transaction_id=query_response["Data"].get("TransactionId", "100000006") if query_response and "Data" in query_response else "100000006",
+                amount=Decimal(str(query_response["Data"].get("Amount", base_amount_decimal))) if query_response and "Data" in query_response else base_amount_decimal,
+                actual_payment_amount=Decimal(str(query_response["Data"].get("ActualPaymentAmount", base_amount_decimal))) if query_response and "Data" in query_response else base_amount_decimal,
+                actual_collect_amount=Decimal(str(query_response["Data"].get("ActualCollectAmount", base_amount_decimal))) if query_response and "Data" in query_response else base_amount_decimal,
+                payer_charge=Decimal(str(query_response["Data"].get("PayerCharge", '0.00'))) if query_response and "Data" in query_response else Decimal('0.00'),
+                payee_charge=Decimal(str(query_response["Data"].get("PayeeCharge", '0.00'))) if query_response and "Data" in query_response else Decimal('0.00'),
+                pay_message=query_response["Data"].get("PayMessage", "") if query_response and "Data" in query_response else ""
             )
-            qu_res.save()
+            order_query_resp_obj.save()
 
-            if not qu_res.succeeded:
-                return JsonResponse({"status": "error", "message": qu_res.errors}, status=400)
+            if not transaction_succeeded: # If still not succeeded after retries
+                return JsonResponse({"status": "error", "message": order_query_resp_obj.errors or "Transaction failed after multiple attempts."}, status=400)
+
+
+        # --- System Earnings Update (Atomic) ---
+        with transaction.atomic():
+            system = SystemEarnings.load() # Reload inside atomic block to get freshest data
+            system.total_transactions += 1 # Increment for every transaction attempt
+            if transaction_succeeded:
+                system.total_successful_transactions += 1
+                # total_volume and total_earnings would be updated here if they are part of this function's scope.
+                # As per your simplification, they are not, which is fine.
+            system.save()
 
         return JsonResponse({"status": "success"})
 
     except Exception as e:
-        print(e)
+        print(f"An error occurred: {e}")
+        # Consider logging the full traceback here for debugging in production
+        # import traceback
+        # traceback.print_exc()
         return JsonResponse({"status": "error", "message": str(e)}, status=500)

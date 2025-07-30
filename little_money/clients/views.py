@@ -2,6 +2,8 @@ import datetime
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
+
+from config.transaction_orchestrator import handle_full_transaction
 from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry, DailyPayment
 from django.utils.timezone import now, localdate
 from core.utils import is_client
@@ -13,7 +15,7 @@ from config.help import process_transaction
 from decimal import Decimal, InvalidOperation
 from django.contrib.auth import update_session_auth_hash
 from .forms import ClientProfileForm, ClientPasswordChangeForm, NotificationPreferencesForm
-
+from finance.models import SystemEarnings
 
 def is_all_zero(data):
     """Check if all values in the data list are zero."""
@@ -125,7 +127,7 @@ def payments(request):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
     finances, created = Finances.objects.get_or_create(client=client, defaults={'balance': Decimal('0.00')})
     # Validation for disbursement amount <= balance
-    
+    system = SystemEarnings.load()
     if request.method == 'POST':
         if 'single_payment' in request.POST:
             print(request.POST)  
@@ -152,7 +154,7 @@ def payments(request):
                 if amount_decimal > finances.balance:
                     messages.error(request, f'Disbursement amount {amount} exceeds available balance {finances.balance}. Transaction cancelled.')
                     return redirect('client:payments')
-                return process_transaction(
+                response = handle_full_transaction(
                     channel=channel,
                     t_type=2,
                     client_id=client.id,
@@ -161,10 +163,12 @@ def payments(request):
                     message=message,
                     name=name
                 )
-
+                if response['status'] == 'success':
+                    messages.success(request, f'Disbursement for {name} ({phone}) successful.')
+                    return redirect('client:payments')
             except Exception as e:
                 message = f"failed due to{str(e)}"
-                return render(request, 'dashboard/payments.html')
+                return redirect('client:payments')
 
         elif 'multiple_payments' in request.POST:
             try:
@@ -224,7 +228,7 @@ def payments(request):
                         trader_id = client.trader_id if hasattr(client, 'trader_id') else str(client.id)
                         message = f"Disbursement for {name} ({phone})"
 
-                        result = process_transaction(
+                        result = handle_full_transaction(
                             channel=channel,
                             t_type=2,
                             client_id=client.id,
@@ -233,9 +237,10 @@ def payments(request):
                             message=message,
                             name=name
                         )
-
-                        if result.status_code == 200:
-                            payments_processed += 1
+                        if result['status'] == 'success':
+                            messages.success(request, f'Disbursement for {name} ({phone}) successful.')
+                            return redirect('client:payments')
+                            
                         else:
                             errors.append({
                                 'row': name,
@@ -282,7 +287,7 @@ def accounts(request):
             map_channel = {'MTN': 1, 'Airtel': 2}
             channel = map_channel[payment_method]
             message = f"Collecttion for {name}"
-            result = process_transaction(
+            result = handle_full_transaction(
                             channel=channel,
                             t_type=1,
                             client_id=client.id,
@@ -291,7 +296,7 @@ def accounts(request):
                             message=message,
                             name=name
                         )
-            if result.status_code == 200:
+            if result['status'] == 'success':
                 # Record the fund addition as a RecentTransaction with transaction_type 'collection'
                 RecentTransaction.objects.create(
                     client=client,
@@ -300,9 +305,6 @@ def accounts(request):
                     recipient=name,
                     phone=phone,
                 )
-                # Update or create Finances balance
-                finances.balance += amount_decimal
-                finances.save()
                 messages.success(request, f'Funds of {amount} added for {name} ({phone}) via {payment_method}.')
 
         return redirect('client:accounts')

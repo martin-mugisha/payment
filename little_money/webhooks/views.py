@@ -7,12 +7,14 @@ from django.utils.timezone import make_aware
 from django.utils.timezone import now
 from config.models import UnifiedOrderRequest 
 from config.utils import verify_signature
+from django.views.decorators.http import require_POST
 
 from .models import PaymentNotification
 
 
 PRIVATE_KEY =settings.PAYMENT_AGGREGATOR_API_KEY
-@csrf_exempt
+@csrf_exempt  
+@require_POST
 def payment_notification(request):
     if request.method != 'POST':
         return HttpResponseBadRequest("Only POST allowed")
