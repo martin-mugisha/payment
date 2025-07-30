@@ -81,9 +81,6 @@
       <form method="post" class="login-form">
         {% csrf_token %}
         <h2>Login</h2>
-        {% if messages %} {% for message in messages %}
-        <p class="message">{{ message }}</p>
-        {% endfor %} {% endif %}
         <label>
           Username:
           <input type="text" name="username" required />
