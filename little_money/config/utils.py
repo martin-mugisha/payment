@@ -2,14 +2,17 @@ from decimal import Decimal
 import secrets
 import string
 import hashlib
-import json
+import logging
+from decimal import Decimal
 import time
-from typing import Dict, Any
+from typing import Dict
 from venv import logger
 from jsonschema import validate, ValidationError
 from datetime import datetime
 import pytz
 
+
+logger = logging.getLogger(__name__)
 # Global counter
 sequence_counter = 0
 
@@ -22,7 +25,9 @@ def generate_signature(params, field_order, private_key) -> str:
     return hashlib.md5(to_sign.encode('utf-8')).hexdigest()
 
 
-def verify_signature(data: dict, private_key: str) -> bool:
+
+def verify_signature(data: Dict, private_key: str) -> bool:
+    # LipaPay callback field order (from official docs, section 3.2)
     webhook_field_order = [
         'PayStatus',
         'PayTime',
@@ -35,31 +40,33 @@ def verify_signature(data: dict, private_key: str) -> bool:
         'PayeeCharge',
         'PayMessage'
     ]
+
     to_sign_parts = []
-    for k in webhook_field_order:
-        value = data.get(k)
+    for field in webhook_field_order:
+        value = data.get(field)
+
         if value is None:
             value_str = ""
-        elif isinstance(value, (int, float, Decimal)): 
-            value_str = str(value)
+        elif isinstance(value, (float, Decimal)):
+            # LipaPay uses 6 decimal places consistently
+            value_str = f"{Decimal(value):.6f}"
         else:
             value_str = str(value)
-        
-        to_sign_parts.append(f"{k}={value_str}")
 
-    to_sign = '&'.join(to_sign_parts)
-    to_sign += f"&privateKey={private_key}" # Or &key=private_key or &secret=private_key based on their docs
+        to_sign_parts.append(f"{field}={value_str}")
 
-    calculated_md5_hash = hashlib.md5(to_sign.encode('utf-8')).hexdigest()
-    
-    received_signature = data.get('Sign')
-    
+    # Add private key at the end
+    to_sign_string = '&'.join(to_sign_parts) + f"&privateKey={private_key}"
+    calculated_md5 = hashlib.md5(to_sign_string.encode('utf-8')).hexdigest()
+
+    received_signature = data.get("Sign", "").lower()  # MD5 hex is lowercase by convention
+
+    # Optional: Logging for debugging
     logger.info(f"Received signature: {received_signature}")
-    logger.info(f"String to sign (encoded): {to_sign.encode('utf-8')}")
-    logger.info(f"Calculated signature: {calculated_md5_hash}")
+    logger.info(f"String to sign: {to_sign_string}")
+    logger.info(f"Calculated signature: {calculated_md5}")
 
-    return calculated_md5_hash == received_signature
-
+    return calculated_md5 == received_signature
 
 def validate_signature(request_data, private_key):
     """
