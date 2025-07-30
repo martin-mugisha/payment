@@ -175,26 +175,3 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CSRF_TRUSTED_ORIGINS = [
     'https://mangupay.tech',
 ]
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'gunicorn_error_file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': '/home/server/mine/live projects/payment/error.log',
-        },
-    },
-    'root': {
-        'handlers': ['gunicorn_error_file'],
-        'level': 'ERROR',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['gunicorn_error_file'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-    },
-}
