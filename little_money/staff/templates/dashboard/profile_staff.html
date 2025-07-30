@@ -1,13 +1,87 @@
-<!-- prettier-ignore -->
- {% extends "dashboard/base_staff.html" %} 
-{% block title %}My Profile{%endblock %} 
+{% extends "dashboard/base_staff.html" %}
+{% load static %}
+{% block title %}My Profile{% endblock %}
+
 {% block content %}
 <h2>My Profile</h2>
 
-<div>
+<!-- Profile Info Section -->
+<div class="user-profile mt-4">
+  <h3>User Profile Information</h3>
+
+  {% if user.profile_image %}
+    <img src="{{ user.profile_image.url }}" alt="Profile image" class="img-thumbnail mb-2" style="max-height: 100px;">
+  {% else %}
+    <img src="{% static 'img/default-avatar.png' %}" alt="Default Avatar" class="img-thumbnail mb-2" style="max-height: 100px;">
+  {% endif %}
+
   <p><strong>Username:</strong> {{ user.username }}</p>
   <p><strong>Email:</strong> {{ user.email }}</p>
   <p><strong>First Name:</strong> {{ user.first_name }}</p>
   <p><strong>Last Name:</strong> {{ user.last_name }}</p>
+  <p><strong>Phone:</strong> {{ user.phone_number }}</p>
+  <p><strong>Address:</strong> {{ user.address }}</p>
+  {% if staff %}
+    <p><strong>Staff Name:</strong> {{ staff.name }}</p>
+  {% endif %}
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#profileModal">
+    Click to Change
+  </button>
+</div>
+
+<!-- Security Section -->
+<div class="security-settings mt-5">
+  <h3>Security Settings</h3>
+  <p>Password Set: {{ user.has_usable_password }}</p>
+  <p>Two-Factor Authentication Enabled: No</p> {# Replace with actual status if implemented #}
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#passwordModal">
+    Click to Change
+  </button>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" enctype="multipart/form-data" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileModalLabel">Update Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if staff %}
+          <div class="mb-3">
+            <label class="form-label">Staff Name</label>
+            <input type="text" name="name" class="form-control" value="{{ staff.name }}">
+          </div>
+        {% endif %}
+        {{ profile_form.as_p }}
+      </div>
+      <div class="modal-footer">
+        <button type="submit" name="profile_form" class="btn btn-success">Save changes</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="passwordModalLabel">Change Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {{ password_form.as_p }}
+      </div>
+      <div class="modal-footer">
+        <button type="submit" name="password_form" class="btn btn-success">Change Password</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}

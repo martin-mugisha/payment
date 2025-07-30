@@ -9,7 +9,7 @@ from django.db.models.functions import TruncWeek, TruncMonth, TruncDate
 from django.shortcuts import render
 from django.db.models import Sum, Exists, OuterRef
 from clients.models import Client, RecentTransaction
-from staff.forms import StaffPasswordChangeForm
+from staff.forms import StaffPasswordChangeForm, StaffProfileForm
 from .models import Staff, Transaction, Balance, WithdrawHistory
 from django.db.models import Sum
 from django.utils.timezone import localdate
@@ -21,11 +21,40 @@ from django.shortcuts import redirect, render
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required, user_passes_test
 
-# Profile View
 @login_required
 @user_passes_test(is_staff)
 def profile_view(request):
-    return render(request, 'dashboard/profile_staff.html', {'user': request.user})
+    user = request.user
+    staff = getattr(user, 'staff', None)
+
+    profile_form = StaffProfileForm(instance=user)
+    password_form = PasswordChangeForm(user)
+
+    if request.method == 'POST':
+        if 'profile_form' in request.POST:
+            profile_form = StaffProfileForm(request.POST, request.FILES, instance=user)
+            if profile_form.is_valid():
+                profile_form.save()
+                if staff:
+                    staff.name = request.POST.get('name', staff.name)
+                    staff.save()
+                messages.success(request, "Profile updated successfully.")
+                return redirect('staff:profile')
+        elif 'password_form' in request.POST:
+            password_form = PasswordChangeForm(user, request.POST)
+            if password_form.is_valid():
+                password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, "Password changed successfully.")
+                return redirect('staff:profile')
+
+    return render(request, 'dashboard/profile_staff.html', {
+        'user': user,
+        'staff': staff,
+        'profile_form': profile_form,
+        'password_form': password_form,
+    })
+
 
 from core.mailcow import sync_mailcow_mailbox  # or core.mailcow if placed there
 

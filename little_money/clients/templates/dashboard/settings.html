@@ -7,8 +7,10 @@
 <!-- Profile Section -->
 <div class="user-profile">
   <h3>User Profile Information</h3>
-  <p>Username: {{ user_settings.profile_info.name }}</p>
+  <p>Name: {{ user_settings.profile_info.name }}</p>
   <p>Email: {{ user_settings.profile_info.email }}</p>
+  <p>Business Type: {{ user_settings.profile_info.business_type }}</p>
+  <p>Status: {{ user_settings.profile_info.status }}</p>
   <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#profileModal">
     Click to Change
   </button>
@@ -44,12 +46,14 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        {% if client.profile_image %}
-          <img src="{{ customUser.profile_image.url }}" alt="Profile image" class="img-thumbnail mb-3" style="max-height: 100px;">
+        {% if user.profile_image %}
+          <img src="{{ user.profile_image.url }}" alt="Profile image" class="img-thumbnail mb-3" style="max-height: 100px;">
         {% else %}
           <p class="text-muted">No profile picture set.</p>
         {% endif %}
         {{ profile_form.as_p }}
+        <label for="id_business_type" class="form-label">Business Type</label>
+        <input type="text" name="business_type" class="form-control" id="id_business_type" value="{{ client.business_type }}">
       </div>
       <div class="modal-footer">
         <button type="submit" name="profile_form" class="btn btn-success">Save changes</button>
@@ -98,5 +102,4 @@
     </form>
   </div>
 </div>
-
 {% endblock %}

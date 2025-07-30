@@ -1,15 +1,49 @@
-<!-- prettier-ignore -->
-{% extends "dashboard/base_admin.html" %} 
-{% block title %}Profile{% endblock %} 
+{% extends "dashboard/base_admin.html" %}
+{% load static %}
+{% block title %}Profile{% endblock %}
+
 {% block content %}
 <h2>User Profile</h2>
-<div class="profile-info card">
-  <p><strong>Username:</strong> {{ user.username }}</p>
-  <p><strong>Email:</strong> {{ user.email }}</p>
-  <p><strong>First Name:</strong> {{ user.first_name }}</p>
-  <p><strong>Last Name:</strong> {{ user.last_name }}</p>
-  <p><strong>Is Staff:</strong> {{ user.is_staff }}</p>
-  <p><strong>Is Superuser:</strong> {{ user.is_superuser }}</p>
-  <p><strong>Is Staff User:</strong> {{ user.is_staff_user }}</p>
+
+<div class="row">
+  <!-- Left Column: Profile Info -->
+  <div class="col-md-5">
+    <div class="profile-info card p-3 mb-3 text-center">
+      {% if user.profile_image %}
+        <img src="{{ user.profile_image.url }}" alt="Profile Image" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+      {% else %}
+        <img src="{% static 'img/default-avatar.png' %}" alt="Default Avatar" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+      {% endif %}
+
+      <p><strong>Username:</strong> {{ user.username }}</p>
+      <p><strong>Email:</strong> {{ user.email }}</p>
+      <p><strong>First Name:</strong> {{ user.first_name }}</p>
+      <p><strong>Last Name:</strong> {{ user.last_name }}</p>
+      <p><strong>Is Staff:</strong> {{ user.is_staff }}</p>
+      <p><strong>Is Staff User:</strong> {{ user.is_staff_user }}</p>
+      <p><strong>Balance:</strong> ${{ balance }}</p>
+    </div>
+  </div>
+
+  <!-- Right Column: Forms -->
+  <div class="col-md-7">
+    <div class="card p-3 mb-3">
+      <h3>Update Profile</h3>
+      <form method="POST" enctype="multipart/form-data" class="mb-4">
+        {% csrf_token %}
+        {{ profile_form.as_p }}
+        <button type="submit" name="profile_form" class="btn btn-primary">Save Changes</button>
+      </form>
+    </div>
+
+    <div class="card p-3">
+      <h3>Change Password</h3>
+      <form method="POST">
+        {% csrf_token %}
+        {{ password_form.as_p }}
+        <button type="submit" name="password_form" class="btn btn-warning">Change Password</button>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}

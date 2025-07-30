@@ -7,7 +7,8 @@ from core.models import CustomUser
 class StaffProfileForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ['first_name', 'last_name', 'email']
+        fields = ['first_name', 'last_name', 'email', 'phone_number', 'address', 'profile_image']
+
 
 class StaffPasswordChangeForm(PasswordChangeForm):
     new_password1 = forms.CharField(

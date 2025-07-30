@@ -157,18 +157,19 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from .forms import AdminProfileForm, AdminPasswordChangeForm
 
-# Profile View
-@login_required
+#@login_required
 @user_passes_test(is_admin)
 def profile_view(request):
     user = request.user
+    admin_profile = getattr(user, 'adminprofile', None)  # get AdminProfile object if exists
+
     if request.method == 'POST':
         if 'profile_form' in request.POST:
-            profile_form = AdminProfileForm(request.POST, instance=user)
+            profile_form = AdminProfileForm(request.POST, request.FILES, instance=user)
             if profile_form.is_valid():
                 profile_form.save()
                 messages.success(request, 'Profile updated successfully.')
-                return redirect('admins:profile_view')
+                return redirect('admins:profile')
             else:
                 messages.error(request, 'Please correct the errors below.')
             password_form = AdminPasswordChangeForm(user)
@@ -178,7 +179,7 @@ def profile_view(request):
                 user = password_form.save()
                 update_session_auth_hash(request, user)
                 messages.success(request, 'Password changed successfully.')
-                return redirect('admins:profile_view')
+                return redirect('admins:profile')
             else:
                 messages.error(request, 'Please correct the errors below.')
             profile_form = AdminProfileForm(instance=user)
@@ -190,7 +191,9 @@ def profile_view(request):
         'profile_form': profile_form,
         'password_form': password_form,
         'user': user,
+        'balance': admin_profile.balance if admin_profile else 0.00,
     })
+
 
 def force_password_change_view(request):
     user = request.user

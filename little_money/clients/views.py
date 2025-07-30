@@ -330,43 +330,43 @@ from django.shortcuts import redirect, render
 @user_passes_test(is_client)
 def settings(request):
     client, _ = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
-    
-    # Create a structured dictionary for template usage
+
     user_settings_data = {
         "profile_info": {
             "name": client.name,
             "email": request.user.email,
+            "business_type": client.business_type,
+            "status": client.status,
         },
         "security": {
             "password_set": request.user.has_usable_password(),
-            "2fa_enabled": False,  # Replace with actual 2FA logic if available
+            "2fa_enabled": False,
         },
         "notifications": {},
     }
 
-    # Fetch or create user_settings model
     try:
         user_settings = client.user_settings
         user_settings_data["notifications"] = user_settings.notifications
-    except UserSetting.DoesNotExist:
-        user_settings = None
+    except AttributeError:
         user_settings_data["notifications"] = {
             "email_notifications": False,
             "sms_notifications": False,
         }
 
-    # Form handling (unchanged except replacing `user_settings.notifications`)
     if request.method == 'POST':
         if 'profile_form' in request.POST:
-            profile_form = ClientProfileForm(request.POST, request.FILES, instance=client)
+            profile_form = ClientProfileForm(request.POST, request.FILES, instance=request.user)
+            business_type = request.POST.get('business_type')  # grab from request
+
             if profile_form.is_valid():
                 profile_form.save()
+                client.business_type = business_type
+                client.save()
                 messages.success(request, 'Profile updated successfully.')
                 return redirect('clients:settings')
             else:
                 messages.error(request, 'Please correct the errors below.')
-            password_form = ClientPasswordChangeForm(request.user)
-            notification_form = NotificationPreferencesForm(initial=user_settings_data["notifications"])
         elif 'password_form' in request.POST:
             password_form = ClientPasswordChangeForm(request.user, request.POST)
             if password_form.is_valid():
@@ -376,31 +376,27 @@ def settings(request):
                 return redirect('clients:settings')
             else:
                 messages.error(request, 'Please correct the errors below.')
-            profile_form = ClientProfileForm(instance=request.user)
-            notification_form = NotificationPreferencesForm(initial=user_settings_data["notifications"])
         elif 'notification_form' in request.POST:
             notification_form = NotificationPreferencesForm(request.POST)
             if notification_form.is_valid():
-                # Save notification preferences here
+                # Save notification prefs here
                 messages.success(request, 'Notification preferences updated successfully.')
                 return redirect('clients:settings')
             else:
                 messages.error(request, 'Please correct the errors below.')
-            profile_form = ClientProfileForm(instance=request.user)
-            password_form = ClientPasswordChangeForm(request.user)
-    else:
-        profile_form = ClientProfileForm(instance=request.user)
-        password_form = ClientPasswordChangeForm(request.user)
-        notification_form = NotificationPreferencesForm(initial=user_settings_data["notifications"])
 
-    context = {
+    profile_form = ClientProfileForm(instance=client)
+    password_form = ClientPasswordChangeForm(request.user)
+    notification_form = NotificationPreferencesForm(initial=user_settings_data["notifications"])
+
+    return render(request, 'dashboard/settings.html', {
         'client': client,
+        'user': request.user,
         'user_settings': user_settings_data,
         'profile_form': profile_form,
         'password_form': password_form,
         'notification_form': notification_form,
-    }
-    return render(request, 'dashboard/settings.html', context)
+    })
 
 @login_required
 @user_passes_test(is_client)
