@@ -4,21 +4,99 @@
 {% block content %}
 <h2>Settings</h2>
 
+<!-- Profile Section -->
 <div class="user-profile">
   <h3>User Profile Information</h3>
-  <p>Name: {{ user_settings.profile_info.name }}</p>
+  <p>Username: {{ user_settings.profile_info.name }}</p>
   <p>Email: {{ user_settings.profile_info.email }}</p>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#profileModal">
+    Click to Change
+  </button>
 </div>
 
-<div class="security-settings">
+<!-- Security Section -->
+<div class="security-settings mt-4">
   <h3>Security Settings</h3>
   <p>Password Set: {{ user_settings.security.password_set }}</p>
   <p>Two-Factor Authentication Enabled: {{ user_settings.security.2fa_enabled }}</p>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#passwordModal">
+    Click to Change
+  </button>
 </div>
 
-<div class="notification-preferences">
+<!-- Notifications Section -->
+<div class="notification-preferences mt-4">
   <h3>Notification Preferences</h3>
   <p>Email Notifications: {{ user_settings.notifications.email_notifications }}</p>
   <p>SMS Notifications: {{ user_settings.notifications.sms_notifications }}</p>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#notificationsModal">
+    Click to Change
+  </button>
 </div>
+
+<!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" enctype="multipart/form-data" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileModalLabel">Update Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if client.profile_image %}
+          <img src="{{ customUser.profile_image.url }}" alt="Profile image" class="img-thumbnail mb-3" style="max-height: 100px;">
+        {% else %}
+          <p class="text-muted">No profile picture set.</p>
+        {% endif %}
+        {{ profile_form.as_p }}
+      </div>
+      <div class="modal-footer">
+        <button type="submit" name="profile_form" class="btn btn-success">Save changes</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="passwordModalLabel">Change Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {{ password_form.as_p }}
+      </div>
+      <div class="modal-footer">
+        <button type="submit" name="password_form" class="btn btn-success">Change Password</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Notifications Modal -->
+<div class="modal fade" id="notificationsModal" tabindex="-1" aria-labelledby="notificationsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="notificationsModalLabel">Edit Notification Preferences</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {{ notification_form.as_p }}
+      </div>
+      <div class="modal-footer">
+        <button type="submit" name="notification_form" class="btn btn-success">Save Preferences</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}

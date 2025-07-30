@@ -26,4 +26,5 @@ class AdminCommissionHistory(models.Model):
 
 class AdminProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, default="")
     balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)

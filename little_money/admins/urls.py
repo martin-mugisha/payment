@@ -15,11 +15,12 @@ from .views import (
     staff_user_delete,  
     activity_logs,
     finance_dashboard,
+    force_password_change_view,
 )
 
 app_name = 'admins'
 
-urlpatterns=[
+urlpatterns = [
     path('dashboard/', admin_dashboard, name='admin_dashboard'),
     path('payouts/', payouts_overview, name='payouts_overview'),
     path('payouts/<int:payout_id>/approve/', approve_payout, name='approve_payout'),
@@ -34,5 +35,6 @@ urlpatterns=[
     path('profile/', profile_view, name='profile'),
     path('platform-settings/', platform_settings, name='platform_settings'),
     path('finance/', finance_dashboard, name='finance_dashboard'),
-    path('delete-staff-user/<int:user_id>/', staff_user_delete, name='delete_staff_user'),  # New URL pattern
+    path('delete-staff-user/<int:user_id>/', staff_user_delete, name='delete_staff_user'),
+    path('force-password-change/', force_password_change_view, name='force_password_change'),
 ]

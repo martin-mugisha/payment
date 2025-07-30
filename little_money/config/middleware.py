@@ -1,45 +1,47 @@
-from django.http import JsonResponse
-from .models import Merchant, AggregatorCredentials
+from django.shortcuts import redirect
+from django.urls import reverse
+from core.utils import is_admin, is_client, is_staff
+from staff.models import Staff
+from clients.models import Client
+from admins.models import AdminProfile
 
-class MerchantAuthMiddleware:
+class FirstLoginPasswordChangeMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        api_key = request.headers.get("X-API-KEY")
-        if not api_key:
-            return JsonResponse({"error": "Missing API key"}, status=401)
+        if request.user.is_authenticated:
+            user = request.user
 
-        # Find merchant by API key (assuming api_key is unique across merchants)
-        try:
-            merchant = Merchant.objects.get(api_key=api_key, is_active=True)
-        except Merchant.DoesNotExist:
-            return JsonResponse({"error": "Invalid API key"}, status=403)
+            # ✅ Ensure role-specific object exists BEFORE using them
+            if is_staff(user):
+                Staff.objects.get_or_create(user=user, defaults={'name': user.username})
+            elif is_client(user):
+                Client.objects.get_or_create(user=user, defaults={'name': user.username})
+            elif is_admin(user):
+                AdminProfile.objects.get_or_create(user=user, defaults={'name': user.username})
 
-        # Determine mode
-        # Option 1: from subdomain (e.g., sandbox.example.com, live.example.com)
-        host = request.get_host()
-        if host.startswith("sandbox."):
-            mode = "sandbox"
-        elif host.startswith("live."):
-            mode = "live"
-        else:
-            # fallback to merchant default
-            mode = merchant.default_mode
+            # ✅ Define allowed paths (normalized)
+            allowed_paths = [
+                reverse('admins:force_password_change'),
+                reverse('clients:force_password_change'),
+                reverse('staff:force_password_change'),
+                reverse('authenticate:logout'),
+            ]
 
-        # Check merchant allowed modes
-        if mode not in merchant.allowed_modes:
-            return JsonResponse({"error": f"Access to {mode} mode not allowed for this merchant"}, status=403)
+            normalized_path = request.path.rstrip("/")
 
-        # Attach merchant and mode to request
-        request.merchant = merchant
-        request.mode = mode
+            if normalized_path not in [p.rstrip("/") for p in allowed_paths]:
+                if getattr(user, 'is_first_login', False):
+                    print(f"Redirecting user {user.username} from {request.path} to password change page")
 
-        # Optionally attach aggregator credentials for this mode
-        try:
-            creds = AggregatorCredentials.objects.get(merchant=merchant, mode=mode)
-            request.aggregator_credentials = creds
-        except AggregatorCredentials.DoesNotExist:
-            return JsonResponse({"error": f"No aggregator credentials configured for {mode} mode"}, status=500)
+                    if is_admin(user):
+                        return redirect('admins:force_password_change')
+                    elif is_client(user):
+                        return redirect('clients:force_password_change')
+                    elif is_staff(user):
+                        return redirect('staff:force_password_change')
+                    else:
+                        return redirect('authenticate:logout')
 
         return self.get_response(request)

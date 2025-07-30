@@ -3,6 +3,7 @@ from django.contrib.admin.models import LogEntry
 from decimal import Decimal
 from clients.models import Client, RecentTransaction
 from config.aggregator import GetBalance
+from core.mailcow import sync_mailcow_mailbox
 from .models import AdminCommissionHistory, AuthLog
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
@@ -150,11 +151,75 @@ def staff_user_delete(request, user_id):
         messages.success(request, f"Staff user '{user.username}' deleted.")
     return redirect('admins:staff_users')
 
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib import messages
+from django.shortcuts import redirect, render
+from .forms import AdminProfileForm, AdminPasswordChangeForm
+
 # Profile View
 @login_required
+@user_passes_test(is_admin)
 def profile_view(request):
-    return render(request, 'dashboard/profile.html', {'user': request.user})
+    user = request.user
+    if request.method == 'POST':
+        if 'profile_form' in request.POST:
+            profile_form = AdminProfileForm(request.POST, instance=user)
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, 'Profile updated successfully.')
+                return redirect('admins:profile_view')
+            else:
+                messages.error(request, 'Please correct the errors below.')
+            password_form = AdminPasswordChangeForm(user)
+        elif 'password_form' in request.POST:
+            password_form = AdminPasswordChangeForm(user, request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Password changed successfully.')
+                return redirect('admins:profile_view')
+            else:
+                messages.error(request, 'Please correct the errors below.')
+            profile_form = AdminProfileForm(instance=user)
+    else:
+        profile_form = AdminProfileForm(instance=user)
+        password_form = AdminPasswordChangeForm(user)
 
+    return render(request, 'dashboard/profile.html', {
+        'profile_form': profile_form,
+        'password_form': password_form,
+        'user': user,
+    })
+
+def force_password_change_view(request):
+    user = request.user
+    if request.method == 'POST':
+        password_form = AdminPasswordChangeForm(user, request.POST)
+        if password_form.is_valid():
+            user = password_form.save()
+            user.is_first_login = False
+            user.save()
+
+            # 🔁 Mailcow sync here
+            new_password = password_form.cleaned_data['new_password1']
+            try:
+                sync_mailcow_mailbox(user, new_password)
+            except Exception as e:
+                messages.warning(request, f"Password changed, but Mailbox sync failed: {e}")
+
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Password changed successfully.')
+            return redirect('admins:admin_dashboard')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        password_form = AdminPasswordChangeForm(user)
+
+    return render(request, 'dashboard/force_password_change.html', {
+        'password_form': password_form,
+        'user': user,
+    })
 
 @login_required
 @user_passes_test(is_admin)

@@ -109,19 +109,22 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
         system.total_transactions += 1
 
         if unifiedorder_response.get("StatusCode") == 200:
+            print("API call succeeded. Starting database updates...")
+    
             if staff:
-                staff_balance, _ = Balance.objects.get_or_create(staff=staff)
+                print("Staff is assigned. Updating staff balance...")
+                staff_balance, created = Balance.objects.get_or_create(staff=staff)
+                print(f"Got or created staff balance: {staff_balance}. Created: {created}")
                 staff_balance.balance += staff_commission
                 staff_balance.save()
+                print("Staff balance saved.")
 
-                staff_comm_total = StaffCommissionAggregate.load()
-                staff_comm_total.total_commission += staff_commission
-                staff_comm_total.save()
-
+            print("Updating client balance...")
             client_finance, _ = Finances.objects.get_or_create(client=client)
             client_finance.balance += Decimal(base_amount)
             client_finance.save()
-
+            print("Client balance saved.")
+            print("Updating admin balances...")
             admins = CustomUser.objects.filter(role='admin')
             num_admins = admins.count()
             if num_admins > 0:
@@ -134,8 +137,9 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             system.total_volume += base_amount
             system.total_successful_transactions += 1
             system.save()
+            print("System earnings saved.")
 
-        if unifiedorder_response.get("StatusCode") != 200 or not unifiedorder_response.get("Succeeded"):
+        else:
             system.total_transactions += 1
             max_attempts = 3
             attempt = 0

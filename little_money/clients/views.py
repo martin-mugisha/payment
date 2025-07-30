@@ -1,20 +1,18 @@
-from django.shortcuts import render, get_object_or_404
+import datetime
+from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry,DailyPayment
-from django.utils.timezone import now
+from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry, DailyPayment
+from django.utils.timezone import now, localdate
 from core.utils import is_client
 import openpyxl
 from django.contrib import messages
-from django.shortcuts import redirect
-from django.utils.timezone import localdate
-import datetime
 from django.db.models import Sum
 from calendar import monthrange
 from config.help import process_transaction
-from django.contrib import messages
-from django.http import JsonResponse
-from decimal import Decimal
-from django.utils.timezone import now
+from decimal import Decimal, InvalidOperation
+from django.contrib.auth import update_session_auth_hash
+from .forms import ClientProfileForm, ClientPasswordChangeForm, NotificationPreferencesForm
 
 
 def is_all_zero(data):
@@ -111,8 +109,7 @@ def overview_dashboard(request):
     }
     return render(request, 'dashboard/overview.html', context)
 
-@login_required
-@user_passes_test(is_client)
+
 def transactions(request):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
     transaction_history = RecentTransaction.objects.filter(client=client).order_by('-date')
@@ -126,7 +123,9 @@ def transactions(request):
 @user_passes_test(is_client)
 def payments(request):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
-
+    finances, created = Finances.objects.get_or_create(client=client, defaults={'balance': Decimal('0.00')})
+    # Validation for disbursement amount <= balance
+    
     if request.method == 'POST':
         if 'single_payment' in request.POST:
             print(request.POST)  
@@ -135,29 +134,27 @@ def payments(request):
                 phone = request.POST.get('phone')
                 amount = request.POST.get('amount')
                 payment_method = request.POST.get('payment_method')
-                transaction_type = request.POST.get('transaction_type')
 
                 if payment_method not in ['MTN', 'Airtel']:
                     return JsonResponse({'status': 'error', 'message': 'Invalid payment method selected.'}, status=400)
-                if transaction_type not in ['collection', 'disbursement']:
-                    return JsonResponse({'status': 'error', 'message': 'Invalid transaction type selected.'}, status=400)
-
+                
                 # Mapping to expected integer values
                 map_channel = {'MTN': 1, 'Airtel': 2}
-                t_type_map = {'collection': 1, 'disbursement': 2}
 
                 channel = map_channel[payment_method]
-                t_type = t_type_map[transaction_type]
 
                 amount_decimal = Decimal(amount)
                 base_amount = int(amount_decimal)
 
                 trader_id = str(phone)
-                message = f"{transaction_type.capitalize()} for {name} ({phone})"
+                message = f"Disbursment for {name} ({phone})"
 
+                if amount_decimal > finances.balance:
+                    messages.error(request, f'Disbursement amount {amount} exceeds available balance {finances.balance}. Transaction cancelled.')
+                    return redirect('client:payments')
                 return process_transaction(
                     channel=channel,
-                    t_type=t_type,
+                    t_type=2,
                     client_id=client.id,
                     base_amount=base_amount,
                     trader_id=trader_id,
@@ -180,39 +177,56 @@ def payments(request):
 
                 wb = openpyxl.load_workbook(payment_file)
                 sheet = wb.active
-                payments_processed = 0
-                errors = []
 
-                for row in sheet.iter_rows(min_row=2, values_only=True):
-                    if len(row) == 4:
-                        name, phone, amount, payment_method = row
-                        transaction_type = 'collection'
-                    elif len(row) >= 5:
-                        name, phone, amount, payment_method, transaction_type = row
-                        if transaction_type not in ['collection', 'disbursement']:
-                            transaction_type = 'collection'
-                    else:
+                total_requested = Decimal('0.00')
+                errors = []
+                valid_rows = []
+
+                for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                    if len(row) < 4:
+                        errors.append({'row': idx, 'message': 'Incomplete row data.'})
                         continue
 
+                    name, phone, amount, payment_method = row[:4]
+
                     if payment_method not in ['MTN', 'Airtel']:
+                        errors.append({'row': idx, 'message': f'Invalid payment method: {payment_method}'})
                         continue
 
                     try:
-                        amount_decimal = Decimal(amount)
-                        base_amount = int(amount_decimal)
+                        amount_decimal = Decimal(str(amount))
+                        if amount_decimal <= 0:
+                            raise ValueError("Amount must be greater than zero.")
+                        total_requested += amount_decimal
+                        valid_rows.append((name, phone, amount_decimal, payment_method))
+                    except (InvalidOperation, ValueError) as e:
+                        errors.append({'row': idx, 'message': f'Invalid amount: {amount}. {str(e)}'})
 
+                if total_requested > finances.balance:
+                    required_top_up = total_requested - finances.balance
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Insufficient balance. Total disbursement amount is {total_requested}, '
+                                f'but your balance is {finances.balance}. You need to top up {required_top_up}.',
+                        'total_requested': str(total_requested),
+                        'current_balance': str(finances.balance),
+                        'required_top_up': str(required_top_up),
+                        'errors': errors,
+                    }, status=400)
+
+                # Process all valid transactions
+                payments_processed = 0
+                for name, phone, amount_decimal, payment_method in valid_rows:
+                    try:
                         map_channel = {'MTN': 1, 'Airtel': 2}
-                        t_type_map = {'collection': 1, 'disbursement': 2}
-
                         channel = map_channel[payment_method]
-                        t_type = t_type_map[transaction_type]
-
+                        base_amount = int(amount_decimal)
                         trader_id = client.trader_id if hasattr(client, 'trader_id') else str(client.id)
-                        message = f"{transaction_type.capitalize()} for {name} ({phone})"
+                        message = f"Disbursement for {name} ({phone})"
 
                         result = process_transaction(
                             channel=channel,
-                            t_type=t_type,
+                            t_type=2,
                             client_id=client.id,
                             base_amount=base_amount,
                             trader_id=trader_id,
@@ -223,14 +237,18 @@ def payments(request):
                         if result.status_code == 200:
                             payments_processed += 1
                         else:
-                            errors.append({'row': row, 'message': result.json().get('message', 'Unknown error')})
+                            errors.append({
+                                'row': name,
+                                'message': result.json().get('message', 'Unknown error')
+                            })
 
                     except Exception as e:
-                        errors.append({'row': row, 'message': str(e)})
+                        errors.append({'row': name, 'message': str(e)})
 
                 return JsonResponse({
                     'status': 'success',
                     'processed': payments_processed,
+                    'total_requested': str(total_requested),
                     'errors': errors
                 })
 
@@ -258,36 +276,33 @@ def accounts(request):
         phone = request.POST.get('phone')
         amount = request.POST.get('amount')
         payment_method = request.POST.get('payment_method')
-        transaction_type = request.POST.get('transaction_type', 'collection')
-
         if payment_method not in ['MTN', 'Airtel']:
             messages.error(request, 'Invalid payment method selected.')
-        elif transaction_type not in ['collection', 'disbursement']:
-            messages.error(request, 'Invalid transaction type selected.')
         else:
             from decimal import Decimal
             amount_decimal = Decimal(amount)
-            finances, created = Finances.objects.get_or_create(client=client, defaults={'balance': Decimal('0.00')})
-
-            # Validation for disbursement amount <= balance
-            if transaction_type == 'disbursement' and amount_decimal > finances.balance:
-                messages.error(request, f'Disbursement amount {amount} exceeds available balance {finances.balance}. Transaction cancelled.')
-                return redirect('client:accounts')
-
-            # Record the fund addition as a RecentTransaction with transaction_type 'collection'
-            RecentTransaction.objects.create(
-                client=client,
-                date=now().date(),
-                amount=amount_decimal,
-                recipient=name,
-                phone=phone,
-            )
-            # Update or create Finances balance
-            if transaction_type == 'collection':
+            message = f"Collecttion for {name}"
+            result = process_transaction(
+                            channel=payment_method,
+                            t_type=1,
+                            client_id=client.id,
+                            base_amount=amount,
+                            trader_id=phone,
+                            message=message,
+                            name=name
+                        )
+            if result.status_code == 200:
+                # Record the fund addition as a RecentTransaction with transaction_type 'collection'
+                RecentTransaction.objects.create(
+                    client=client,
+                    date=now().date(),
+                    amount=amount_decimal,
+                    recipient=name,
+                    phone=phone,
+                )
+                # Update or create Finances balance
                 finances.balance += amount_decimal
-            else:
-                finances.balance -= amount_decimal
-
+            
             # Ensure balance never goes below 0
             if finances.balance < 0:
                 messages.error(request, 'Balance cannot go below zero. Transaction cancelled.')
@@ -306,18 +321,84 @@ def accounts(request):
     }
     return render(request, 'dashboard/accounts.html', context)
 
+from django.contrib.auth import update_session_auth_hash
+from django.contrib import messages
+from .forms import ClientProfileForm, ClientPasswordChangeForm, NotificationPreferencesForm
+from django.shortcuts import redirect, render
+
 @login_required
 @user_passes_test(is_client)
 def settings(request):
-    client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
-    user_settings = None
+    client, _ = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+    
+    # Create a structured dictionary for template usage
+    user_settings_data = {
+        "profile_info": {
+            "name": client.name,
+            "email": request.user.email,
+        },
+        "security": {
+            "password_set": request.user.has_usable_password(),
+            "2fa_enabled": False,  # Replace with actual 2FA logic if available
+        },
+        "notifications": {},
+    }
+
+    # Fetch or create user_settings model
     try:
         user_settings = client.user_settings
+        user_settings_data["notifications"] = user_settings.notifications
     except UserSetting.DoesNotExist:
         user_settings = None
+        user_settings_data["notifications"] = {
+            "email_notifications": False,
+            "sms_notifications": False,
+        }
+
+    # Form handling (unchanged except replacing `user_settings.notifications`)
+    if request.method == 'POST':
+        if 'profile_form' in request.POST:
+            profile_form = ClientProfileForm(request.POST, request.FILES, instance=client)
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, 'Profile updated successfully.')
+                return redirect('clients:settings')
+            else:
+                messages.error(request, 'Please correct the errors below.')
+            password_form = ClientPasswordChangeForm(request.user)
+            notification_form = NotificationPreferencesForm(initial=user_settings_data["notifications"])
+        elif 'password_form' in request.POST:
+            password_form = ClientPasswordChangeForm(request.user, request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Password changed successfully.')
+                return redirect('clients:settings')
+            else:
+                messages.error(request, 'Please correct the errors below.')
+            profile_form = ClientProfileForm(instance=request.user)
+            notification_form = NotificationPreferencesForm(initial=user_settings_data["notifications"])
+        elif 'notification_form' in request.POST:
+            notification_form = NotificationPreferencesForm(request.POST)
+            if notification_form.is_valid():
+                # Save notification preferences here
+                messages.success(request, 'Notification preferences updated successfully.')
+                return redirect('clients:settings')
+            else:
+                messages.error(request, 'Please correct the errors below.')
+            profile_form = ClientProfileForm(instance=request.user)
+            password_form = ClientPasswordChangeForm(request.user)
+    else:
+        profile_form = ClientProfileForm(instance=request.user)
+        password_form = ClientPasswordChangeForm(request.user)
+        notification_form = NotificationPreferencesForm(initial=user_settings_data["notifications"])
+
     context = {
         'client': client,
-        'user_settings': user_settings,
+        'user_settings': user_settings_data,
+        'profile_form': profile_form,
+        'password_form': password_form,
+        'notification_form': notification_form,
     }
     return render(request, 'dashboard/settings.html', context)
 
@@ -333,3 +414,25 @@ def help_support(request):
         'knowledge_base': knowledge_base,
     }
     return render(request, 'dashboard/help_support.html', context)
+
+
+def force_password_change_view(request):
+    user = request.user
+    if request.method == 'POST':
+        password_form = ClientPasswordChangeForm(user, request.POST)
+        if password_form.is_valid():
+            user = password_form.save()
+            user.is_first_login = False
+            user.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Password changed successfully.')
+            return redirect('client:overview_dashboard')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        password_form = ClientPasswordChangeForm(user)
+
+    return render(request, 'dashboard/force_password_change.html', {
+        'password_form': password_form,
+        'user': user,
+    })

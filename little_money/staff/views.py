@@ -9,17 +9,54 @@ from django.db.models.functions import TruncWeek, TruncMonth, TruncDate
 from django.shortcuts import render
 from django.db.models import Sum, Exists, OuterRef
 from clients.models import Client, RecentTransaction
+from staff.forms import StaffPasswordChangeForm
 from .models import Staff, Transaction, Balance, WithdrawHistory
 from django.db.models import Sum
 from django.utils.timezone import localdate
 from django.http import HttpResponse
 from core.utils import is_staff
+from django.contrib.auth import update_session_auth_hash
+from django.contrib import messages
+from django.shortcuts import redirect, render
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 # Profile View
 @login_required
 @user_passes_test(is_staff)
 def profile_view(request):
-    return render(request, 'dashboard/admin/profile.html', {'user': request.user})
+    return render(request, 'dashboard/profile_staff.html', {'user': request.user})
+
+from core.mailcow import sync_mailcow_mailbox  # or core.mailcow if placed there
+
+def force_password_change_view(request):
+    user = request.user
+    if request.method == 'POST':
+        password_form = StaffPasswordChangeForm(user, request.POST)
+        if password_form.is_valid():
+            user = password_form.save()
+            user.is_first_login = False
+            user.save()
+
+            # 🔁 Sync new password to Mailcow
+            new_password = password_form.cleaned_data['new_password1']
+            try:
+                sync_mailcow_mailbox(user, new_password)
+            except Exception as e:
+                messages.warning(request, f"Password changed, but Mailbox sync failed: {e}")
+
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Password changed successfully.')
+            return redirect('staff:summary_dashboard')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        password_form = StaffPasswordChangeForm(user)
+
+    return render(request, 'dashboard/force_password_change.html', {
+        'password_form': password_form,
+        'user': user,
+    })
 
 def is_all_zero(data):
     """Check if all values in the data list are zero."""
