@@ -38,6 +38,8 @@ class Finances(models.Model):
     class Meta:
         verbose_name_plural = "Client Finances"
         ordering = ['client__name']
+    def __str__(self):
+        return f"Finances for {self.client.user.username}"
 
 class RecentTransaction(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='recent_transactions')

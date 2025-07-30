@@ -128,7 +128,6 @@ def payments(request):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
     finances, created = Finances.objects.get_or_create(client=client, defaults={'balance': Decimal('0.00')})
     # Validation for disbursement amount <= balance
-    system = SystemEarnings.load()
     if request.method == 'POST':
         if 'single_payment' in request.POST:
             print(request.POST)  

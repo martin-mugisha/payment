@@ -57,6 +57,7 @@ def payment_notification(request):
 
     # Verify signature
     if not verify_signature(data, PRIVATE_KEY):
+        logger.info(f"Raw webhook data: {json.dumps(data, indent=2)}")
         logger.error("Signature verification failed for webhook.")
         return HttpResponse("FAILED") # Standard response for failed verification
 
