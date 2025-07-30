@@ -1,9 +1,11 @@
+from decimal import Decimal
 import secrets
 import string
 import hashlib
 import json
 import time
 from typing import Dict, Any
+from venv import logger
 from jsonschema import validate, ValidationError
 from datetime import datetime
 import pytz
@@ -21,7 +23,7 @@ def generate_signature(params, field_order, private_key) -> str:
 
 
 def verify_signature(data: dict, private_key: str) -> bool:
-    fields = [
+    webhook_field_order = [
         'PayStatus',
         'PayTime',
         'OutTradeNo',
@@ -31,21 +33,32 @@ def verify_signature(data: dict, private_key: str) -> bool:
         'ActualCollectAmount',
         'PayerCharge',
         'PayeeCharge',
-        # 'PayMessage' # excluded
+        'PayMessage'
     ]
-    
-    concat_str = ""
-    for field in fields:
-        value = data.get(field)
-        # Handle None values as empty strings
+    to_sign_parts = []
+    for k in webhook_field_order:
+        value = data.get(k)
         if value is None:
-            value = ""
-        concat_str += str(value)
-    concat_str += private_key
+            value_str = ""
+        elif isinstance(value, (int, float, Decimal)): 
+            value_str = str(value)
+        else:
+            value_str = str(value)
+        
+        to_sign_parts.append(f"{k}={value_str}")
+
+    to_sign = '&'.join(to_sign_parts)
+    to_sign += f"&privateKey={private_key}" # Or &key=private_key or &secret=private_key based on their docs
+
+    calculated_md5_hash = hashlib.md5(to_sign.encode('utf-8')).hexdigest()
     
-    md5_hash = hashlib.md5(concat_str.encode('utf-8')).hexdigest()
+    received_signature = data.get('Sign')
     
-    return md5_hash == data.get('Sign')
+    logger.info(f"Received signature: {received_signature}")
+    logger.info(f"String to sign (encoded): {to_sign.encode('utf-8')}")
+    logger.info(f"Calculated signature: {calculated_md5_hash}")
+
+    return calculated_md5_hash == received_signature
 
 
 def validate_signature(request_data, private_key):
