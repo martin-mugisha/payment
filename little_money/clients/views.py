@@ -302,15 +302,8 @@ def accounts(request):
                 )
                 # Update or create Finances balance
                 finances.balance += amount_decimal
-            
-            # Ensure balance never goes below 0
-            if finances.balance < 0:
-                messages.error(request, 'Balance cannot go below zero. Transaction cancelled.')
-                return redirect('client:accounts')
-
-            finances.save()
-
-            messages.success(request, f'Funds of {amount} added for {name} ({phone}) via {payment_method}.')
+                finances.save()
+                messages.success(request, f'Funds of {amount} added for {name} ({phone}) via {payment_method}.')
 
         return redirect('client:accounts')
 
