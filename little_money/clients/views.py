@@ -1,4 +1,5 @@
 import datetime
+import json
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -281,31 +282,66 @@ def accounts(request):
         phone = request.POST.get('phone')
         amount = request.POST.get('amount')
         payment_method = request.POST.get('payment_method')
+
+        if not all([name, phone, amount, payment_method]): # Basic validation for presence
+            messages.error(request, 'All fields (name, phone, amount, payment method) are required.')
+            return redirect('client:accounts')
+
         if payment_method not in ['MTN', 'Airtel']:
             messages.error(request, 'Invalid payment method selected.')
         else:
             map_channel = {'MTN': 1, 'Airtel': 2}
             channel = map_channel[payment_method]
-            message = f"Collecttion for {name}"
-            result = handle_full_transaction(
+            message = f"Collection for {name}"
+            
+            try:
+                base_amount_int = int(amount)
+                if base_amount_int <= 0:
+                     messages.error(request, 'Amount must be greater than zero.')
+                     return redirect('client:accounts')
+            except ValueError:
+                messages.error(request, 'Invalid amount provided.')
+                return redirect('client:accounts')
+
+            # Call the orchestrator function
+            result_response = handle_full_transaction( # Renamed variable to avoid confusion
                             channel=channel,
-                            t_type=1,
+                            t_type=1, # Collection type
                             client_id=client.id,
-                            base_amount=int(amount),
+                            base_amount=base_amount_int,
                             trader_id=phone,
                             message=message,
                             name=name
                         )
-            if result['status'] == 'success':
-                # Record the fund addition as a RecentTransaction with transaction_type 'collection'
-                RecentTransaction.objects.create(
-                    client=client,
-                    date=now().date(),
-                    amount=Decimal(amount),
-                    recipient=name,
-                    phone=phone,
-                )
-                messages.success(request, f'Funds of {amount} added for {name} ({phone}) via {payment_method}.')
+
+            try:
+                # Parse the JSON content from the JsonResponse object
+                result_data = json.loads(result_response.content)
+
+                if result_data.get('status') == 'success': # Use .get() for safer access
+                    # Record the fund addition as a RecentTransaction
+                    # Ensure amount is Decimal when creating RecentTransaction
+                    RecentTransaction.objects.create(
+                        client=client,
+                        date=now().date(),
+                        amount=Decimal(amount), # Use Decimal for amount
+                        recipient=name,
+                        phone=phone,
+                        # Assuming RecentTransaction has a field for transaction_type
+                        # transaction_type='collection' 
+                    )
+                    messages.success(request, f'Funds of {amount} added for {name} ({phone}) via {payment_method}.')
+                else:
+                    # Display the error message from the transaction handler
+                    error_message = result_data.get('message', 'An unknown error occurred during transaction.')
+                    messages.error(request, f'Transaction failed: {error_message}')
+
+            except json.JSONDecodeError:
+                messages.error(request, 'Received an invalid response from the transaction system.')
+            except Exception as e:
+                # Catch any other unexpected errors during response processing
+                messages.error(request, f'An unexpected error occurred while processing transaction response: {e}')
+            # --- FIX ENDS HERE ---
 
         return redirect('client:accounts')
 
