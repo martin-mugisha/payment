@@ -56,6 +56,7 @@ class UnifiedOrder:
         order.save()
         try:
             resp = requests.post(url, json=request_data, headers=headers, timeout=10)
+            print(resp)
             resp.raise_for_status()
             return resp.json(), resp.status_code
         except requests.RequestException as e:
