@@ -1,10 +1,10 @@
 import datetime
 import json
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 
-from config.transaction_orchestrator import initiate_payment_process
+from config.transaction_orchestrator import PaymentInitiator
 from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry, DailyPayment
 from django.utils.timezone import now, localdate
 from core.utils import is_client
@@ -12,7 +12,6 @@ import openpyxl
 from django.contrib import messages
 from django.db.models import Sum
 from calendar import monthrange
-from config.help import process_transaction
 from decimal import Decimal, InvalidOperation
 from django.contrib.auth import update_session_auth_hash
 from .forms import ClientProfileForm, ClientPasswordChangeForm, NotificationPreferencesForm
@@ -154,7 +153,7 @@ def payments(request):
                 if amount_decimal > finances.balance:
                     messages.error(request, f'Disbursement amount {amount} exceeds available balance {finances.balance}. Transaction cancelled.')
                     return redirect('client:payments')
-                response = initiate_payment_process(
+                response = PaymentInitiator(
                     channel=channel,
                     t_type=2,
                     client_id=client.id,
@@ -163,7 +162,9 @@ def payments(request):
                     message=message,
                     name=name
                 )
-                if response['status'] == 'success':
+                result_data = response.initiate_transaction()
+                init = json.loads(result_data.content)
+                if init.get('status') == 'success':
                     messages.success(request, f'Disbursement for {name} ({phone}) successful.')
                     return redirect('client:payments')
             except Exception as e:
@@ -174,8 +175,10 @@ def payments(request):
             try:
                 payment_file = request.FILES.get('payment_file')
                 if not payment_file:
-                    return JsonResponse({'status': 'error', 'message': 'No file uploaded.'}, status=400)
-
+                    return JsonResponse({
+                        'status': 'error', 'message': 'No file uploaded.'
+                        },
+                        status=400)
                 if not payment_file.name.endswith(('.xls', '.xlsx')):
                     return JsonResponse({'status': 'error', 'message': 'Invalid file type. Please upload an Excel file.'}, status=400)
 
@@ -208,15 +211,9 @@ def payments(request):
 
                 if total_requested > finances.balance:
                     required_top_up = total_requested - finances.balance
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': f'Insufficient balance. Total disbursement amount is {total_requested}, '
-                                f'but your balance is {finances.balance}. You need to top up {required_top_up}.',
-                        'total_requested': str(total_requested),
-                        'current_balance': str(finances.balance),
-                        'required_top_up': str(required_top_up),
-                        'errors': errors,
-                    }, status=400)
+
+                    messages.warning({request, f'Insufficient balance. Total payment amount is {total_requested}, but your balance is {finances.balance}. you need {required_top_up}.'})
+                    return redirect('client:payments')
 
                 # Process all valid transactions
                 payments_processed = 0
@@ -228,7 +225,7 @@ def payments(request):
                         trader_id = client.trader_id if hasattr(client, 'trader_id') else str(client.id)
                         message = f"Disbursement for {name} ({phone})"
 
-                        result = initiate_payment_process(
+                        result = PaymentInitiator(
                             channel=channel,
                             t_type=2,
                             client_id=client.id,
@@ -237,25 +234,16 @@ def payments(request):
                             message=message,
                             name=name
                         )
-                        if result['status'] == 'success':
+                        result_data = result.initiate_transaction()
+                        init = json.loads(result_data.content)
+                        if init.get('status') == 'success':
+                            payments_processed+=1
                             messages.success(request, f'Disbursement for {name} ({phone}) successful.')
                             return redirect('client:payments')
-                            
-                        else:
-                            errors.append({
-                                'row': name,
-                                'message': result.json().get('message', 'Unknown error')
-                            })
-
                     except Exception as e:
                         errors.append({'row': name, 'message': str(e)})
-
-                return JsonResponse({
-                    'status': 'success',
-                    'processed': payments_processed,
-                    'total_requested': str(total_requested),
-                    'errors': errors
-                })
+                messages.success(request, f"A total of {payments_processed} out of {valid_rows} were successfully processed.")
+                return redirect('client:payments')
 
             except Exception as e:
                 return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
@@ -303,7 +291,7 @@ def accounts(request):
                 return redirect('client:accounts')
 
             # Call the orchestrator function
-            result_response = initiate_payment_process( # Renamed variable to avoid confusion
+            result_response = PaymentInitiator( # Renamed variable to avoid confusion
                             channel=channel,
                             t_type=1, # Collection type
                             client_id=client.id,
@@ -312,12 +300,11 @@ def accounts(request):
                             message=message,
                             name=name
                         )
-
             try:
                 # Parse the JSON content from the JsonResponse object
-                result_data = json.loads(result_response.content)
-
-                if result_data.get('status') == 'success': # Use .get() for safer access
+                result_data = result_response.initiate_transaction()
+                init = json.loads(result_data.content)
+                if init.get('status') == 'success': # Use .get() for safer access
                     # Record the fund addition as a RecentTransaction
                     # Ensure amount is Decimal when creating RecentTransaction
                     RecentTransaction.objects.create(

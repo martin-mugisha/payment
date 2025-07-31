@@ -28,19 +28,6 @@ from django.core.paginator import Paginator
 @login_required
 @user_passes_test(is_admin)
 def admin_dashboard(request):
-    # Get the most recent earnings entry
-    latest_earning = SystemEarnings.objects.order_by('-last_updated').first()
-
-    # Fetch balance from external source
-    balances = GetBalance()
-    response = balances.get_balance()
-    balance = response.get("query_response", {}).get("Data", {}).get("Balance", 0.0)
-
-    # Safely update balance if a record exists
-    if latest_earning:
-        latest_earning.balance += Decimal(balance or 0.0)
-        latest_earning.save()
-
     # Prepare the 10 most recent earnings for chart data
     recent_earnings = SystemEarnings.objects.order_by('-last_updated')[:10][::-1]
 

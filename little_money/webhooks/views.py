@@ -8,15 +8,11 @@ from django.utils.timezone import make_aware, now
 from django.views.decorators.http import require_POST
 from django.db import transaction # Import transaction for atomicity
 from decimal import Decimal # Import Decimal for financial calculations
+from config.transaction_orchestrator import PaymentInitiator
 from core.models import CustomUser
 
-# Import your models
 from .models import PaymentNotification
-# Assuming UnifiedOrderRequest is a model that stores your initiated orders
-# You might need to adjust this import path
-from config.models import UnifiedOrderRequest 
-
-# Import models needed for financial updates
+from config.models import UnifiedOrderRequest, UnifiedOrderResponse 
 from clients.models import Client, Finances
 from staff.models import Balance, ClientAssignment, StaffCommissionHistory
 from admins.models import AdminCommissionHistory, AdminProfile
@@ -135,16 +131,26 @@ def payment_notification(request):
 
         # --- Update UnifiedOrderRequest Status and Get Context ---
         try:
-            # Assuming 'OutTradeNo' from the webhook maps to 'order_number' in your UnifiedOrderRequest
-            order_request = UnifiedOrderRequest.objects.get(order_number=data['OutTradeNo'])
-            
+            # Assuming 'OutTradeNo' from the webhook maps to 'out_trade_no' in your UnifiedOrderRequest
+            order_request = UnifiedOrderResponse.objects.get(out_trade_no=data['OutTradeNo'])
+            transactions = UnifiedOrderRequest.objects.get(out_trade_no=data['OutTradeNo'])
+
+            update = PaymentInitiator(
+                    channel=transactions.channel,
+                    t_type=2,
+                    client_id=order_request.client,
+                    base_amount=transactions.amount,
+                    trader_id=transactions.trader_id,
+                    message=transactions.description,
+                    name=transactions.trader_full_name
+                )
             # Get client, staff, and transaction type from your internal order request
             # You MUST ensure these fields are available on your UnifiedOrderRequest model
             # or can be derived from it.
             # Example: order_request.client, order_request.t_type, order_request.base_amount
             client = order_request.client
-            t_type = order_request.transaction_type # Assuming this field exists on UnifiedOrderRequest
-            base_amount_decimal = order_request.base_amount # Assuming this is stored as Decimal on UnifiedOrderRequest
+            t_type = transactions.transaction_type # Assuming this field exists on UnifiedOrderRequest
+            base_amount_decimal = update.base_amount
             
             assignment = ClientAssignment.objects.filter(client=client).first()
             staff = assignment.staff if assignment else None
@@ -156,7 +162,7 @@ def payment_notification(request):
                 order_request.status = 'paid'  # Update your order status
                 order_request.payment_confirmed_at = pay_time or now()
                 order_request.transaction_id = data['TransactionId']
-                logger.info(f"UnifiedOrderRequest {order_request.order_number} status updated to 'paid'.")
+                logger.info(f"UnifiedOrderRequest {order_request.out_trade_no} status updated to 'paid'.")
 
                 # --- Financial Updates (Business Logic) ---
                 system = SystemEarnings.load()
@@ -180,7 +186,7 @@ def payment_notification(request):
                 admin_commission_total = (fee - staff_commission) * admin_commission_percent / Decimal("100.0")
                 platform_profit = fee - staff_commission - admin_commission_total
 
-                logger.info(f"Calculated for {order_request.order_number}: Staff Comm: {staff_commission}, Admin Comm: {admin_commission_total}, Platform Profit: {platform_profit}")
+                logger.info(f"Calculated for {order_request.out_trade_no}: Staff Comm: {staff_commission}, Admin Comm: {admin_commission_total}, Platform Profit: {platform_profit}")
 
                 if staff:
                     staff_balance, created = Balance.objects.get_or_create(staff=staff)
@@ -203,23 +209,28 @@ def payment_notification(request):
                 
                 client_finance.save()
 
-                admins = CustomUser.objects.filter(role='admin') # Assuming CustomUser is used for admin role
+                admins = CustomUser.objects.filter(role='admin')
                 num_admins = admins.count()
+
                 if num_admins > 0:
                     share = admin_commission_total / num_admins
-                    for admin in admins:
-                        admin.profile.balance += share
-                        admin.profile.save()
-                        logger.info(f"Admin {admin.username} balance updated by {share}.")
+                    with transaction.atomic():
+                        for admin in admins:
+                            try:
+                                admin_profile = AdminProfile.objects.get(user=admin)
+                                admin_profile.balance += share
+                                admin_profile.save()
+                                logger.info(f"Admin {admin.username} balance updated by {share}.")
+                            except AdminProfile.DoesNotExist:
+                                logger.warning(f"AdminProfile not found for user {admin.username}.")
                 else:
                     logger.info("No active admins found for commission distribution.")
-
                 system.total_transactions += 1 # Incremented for every processed notification
                 system.total_earnings += platform_profit
                 system.total_volume += base_amount_decimal
                 system.total_successful_transactions += 1
                 system.save()
-                logger.info(f"System earnings updated for successful transaction {order_request.order_number}.")
+                logger.info(f"System earnings updated for successful transaction {order_request.out_trade_no}.")
 
             elif pay_status == 2:  # payment failed
                 order_request.status = 'payment_failed'
@@ -228,15 +239,15 @@ def payment_notification(request):
                 system = SystemEarnings.load()
                 system.total_transactions += 1 # Still increment total transactions for failed ones
                 system.save()
-                logger.info(f"UnifiedOrderRequest {order_request.order_number} status updated to 'payment_failed'.")
+                logger.info(f"UnifiedOrderRequest {order_request.out_trade_no} status updated to 'payment_failed'.")
             
             elif pay_status == 0:  # processing (or other intermediate status)
                 order_request.status = 'processing'
-                logger.info(f"UnifiedOrderRequest {order_request.order_number} status updated to 'processing'.")
+                logger.info(f"UnifiedOrderRequest {order_request.out_trade_no} status updated to 'processing'.")
                 # No financial updates for processing status typically
             
             order_request.save()
-            logger.info(f"UnifiedOrderRequest {order_request.order_number} saved with status {order_request.status}.")
+            logger.info(f"UnifiedOrderRequest {order_request.out_trade_no} saved with status {order_request.status}.")
 
         except UnifiedOrderRequest.DoesNotExist:
             logger.error(f"UnifiedOrderRequest not found for OutTradeNo: {data['OutTradeNo']}. Cannot update order status or financial records.")
