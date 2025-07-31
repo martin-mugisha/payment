@@ -42,7 +42,13 @@ def verify_signature(data: dict, private_key: str, raw_pay_message: str = None) 
 
     sign_parts = []
     for field in fields:
-        sign_parts.append(f"{field}={data[field]}")
+        # Use the original string value from the JSON if possible
+        raw_match = re.search(fr'"{field}"\s*:\s*([0-9.]+)', raw_pay_message)
+        if raw_match:
+            value = raw_match.group(1)
+        else:
+            value = data[field]
+        sign_parts.append(f"{field}={value}")
 
     # Insert raw PayMessage string exactly as received
     if raw_pay_message is not None:
