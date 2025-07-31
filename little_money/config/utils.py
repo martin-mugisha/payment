@@ -44,18 +44,28 @@ def verify_signature(data: Dict, private_key: str) -> bool:
     to_sign_parts = []
     for field in webhook_field_order:
         value = data.get(field)
+
         if value is None:
             value_str = ""
         elif isinstance(value, (float, Decimal)):
-            value_str = f"{Decimal(value):.6f}"  # Ensure 6 decimal places
+            value_str = f"{Decimal(value):.6f}"
         else:
             value_str = str(value)
+
         to_sign_parts.append(f"{field}={value_str}")
 
     to_sign_string = '&'.join(to_sign_parts) + f"&privateKey={private_key}"
 
     calculated_md5 = hashlib.md5(to_sign_string.encode('utf-8')).hexdigest()
     received_signature = str(data.get("Sign", "")).lower()
+
+    # 🔍 LOGGING FOR DEBUGGING
+    print("==== Signature Debug ====")
+    print("String to sign:")
+    print(to_sign_string)
+    print("Calculated MD5:", calculated_md5)
+    print("Received Sign :", received_signature)
+    print("=========================")
 
     return calculated_md5 == received_signature
 

@@ -37,7 +37,8 @@ def payment_notification(request):
         return HttpResponseBadRequest("Only POST allowed")
 
     try:
-        data = json.loads(request.body)
+        body_unicode = request.body.decode('utf-8')
+        data = json.loads(body_unicode)
         logger.info(f"Webhook payload: {data}")
     except json.JSONDecodeError:
         logger.error("Invalid JSON payload received in webhook.")
