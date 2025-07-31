@@ -36,8 +36,7 @@ def payment_notification(request):
     try:
         body_unicode = request.body.decode('utf-8')
         data = json.loads(body_unicode)
-        raw_pay_message = extract_raw_pay_message(body_unicode)
-        is_valid = verify_signature(data, PRIVATE_KEY, raw_pay_message=raw_pay_message)
+        is_valid = verify_signature(data, PRIVATE_KEY, raw_body=body_unicode)
         print(is_valid)
         logger.info(f"Webhook payload: {data}")
     except json.JSONDecodeError:
