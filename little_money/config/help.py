@@ -78,7 +78,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             channel_charge=Decimal(str(unifiedorder_response["Data"].get("ChannelCharge", '0.00'))),
             client=client
         )
-        print(unified_order_resp_obj)
+        print("Unified order response:",unified_order_resp_obj)
         unified_order_resp_obj.save()
 
         transaction_succeeded = False # Flag to track overall success for system earnings

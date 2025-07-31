@@ -33,49 +33,35 @@ def extract_raw_pay_message(raw_body: str) -> str:
         return match.group(1)
     return ""
 
-def verify_signature(raw_body: str, private_key: str) -> bool:
-    try:
-        data = json.loads(raw_body)
-    except json.JSONDecodeError:
-        return False
-
-    field_order = [
-        'PayStatus',
-        'PayTime',
-        'OutTradeNo',
-        'TransactionId',
-        'Amount',
-        'ActualPaymentAmount',
-        'ActualCollectAmount',
-        'PayerCharge',
-        'PayeeCharge',
-        'ChannelCharge',
-        'PayMessage'
+def verify_signature(data: dict, private_key: str, raw_pay_message: str = None) -> bool:
+    fields = [
+        'PayStatus', 'PayTime', 'OutTradeNo', 'TransactionId',
+        'Amount', 'ActualPaymentAmount', 'ActualCollectAmount',
+        'PayerCharge', 'PayeeCharge', 'ChannelCharge'
     ]
 
-    pay_message_raw = extract_raw_pay_message(raw_body)
+    sign_parts = []
+    for field in fields:
+        sign_parts.append(f"{field}={data[field]}")
 
-    parts = []
-    for field in field_order:
-        if field == "PayMessage":
-            parts.append(f"{field}={pay_message_raw}")
-        else:
-            value = data.get(field, "")
-            if isinstance(value, (float, Decimal)):
-                value = f"{Decimal(value):.6f}"
-            parts.append(f"{field}={value}")
+    # Insert raw PayMessage string exactly as received
+    if raw_pay_message is not None:
+        sign_parts.append(f'PayMessage={raw_pay_message}')
+    else:
+        sign_parts.append(f'PayMessage={data["PayMessage"]}')  # fallback
 
-    to_sign = "&".join(parts) + f"&privateKey={private_key}"
-    calculated_md5 = hashlib.md5(to_sign.encode("utf-8")).hexdigest().lower()
-    received_md5 = data.get("Sign", "").lower()
+    sign_parts.append(f"privateKey={private_key}")
+
+    to_sign = '&'.join(sign_parts)
+    calculated_md5 = hashlib.md5(to_sign.encode('utf-8')).hexdigest()
 
     print("==== Signature Debug ====")
     print("String to sign:", to_sign)
     print("Calculated MD5:", calculated_md5)
-    print("Received Sign :", received_md5)
+    print("Received Sign :", data.get("Sign"))
     print("=========================")
 
-    return calculated_md5 == received_md5
+    return calculated_md5 == data.get("Sign")
 
 def validate_signature(request_data, private_key):
     """

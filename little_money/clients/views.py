@@ -145,9 +145,8 @@ def payments(request):
                 channel = map_channel[payment_method]
 
                 amount_decimal = Decimal(amount)
-                base_amount = int(amount_decimal)
+                base_amount = int(amount)
 
-                trader_id = str(phone)
                 message = f"Disbursment for {name} ({phone})"
 
                 if amount_decimal > finances.balance:
@@ -158,7 +157,7 @@ def payments(request):
                     t_type=2,
                     client_id=client.id,
                     base_amount=base_amount,
-                    trader_id=trader_id,
+                    trader_id=phone,
                     message=message,
                     name=name
                 )

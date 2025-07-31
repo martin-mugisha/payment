@@ -17,7 +17,7 @@ from staff.models import Balance, ClientAssignment, StaffCommissionHistory
 from admins.models import AdminCommissionHistory, AdminProfile
 from finance.models import SystemEarnings
 from config.Platform import PlatformEarnings 
-from config.utils import verify_signature
+from config.utils import verify_signature, extract_raw_pay_message
 
 import logging
 logger = logging.getLogger(__name__)
@@ -36,6 +36,9 @@ def payment_notification(request):
     try:
         body_unicode = request.body.decode('utf-8')
         data = json.loads(body_unicode)
+        raw_pay_message = extract_raw_pay_message(body_unicode)
+        is_valid = verify_signature(data, PRIVATE_KEY, raw_pay_message=raw_pay_message)
+        print(is_valid)
         logger.info(f"Webhook payload: {data}")
     except json.JSONDecodeError:
         logger.error("Invalid JSON payload received in webhook.")
@@ -51,7 +54,7 @@ def payment_notification(request):
             return HttpResponseBadRequest(f"Missing field: {field}")
 
     # Verify signature
-    if not verify_signature(body_unicode, PRIVATE_KEY):
+    if not is_valid:
         logger.info(f"Raw webhook data: {json.dumps(data, indent=2)}")
         logger.error("Signature verification failed for webhook.")
         return HttpResponse("FAILED") # Standard response for failed verification
