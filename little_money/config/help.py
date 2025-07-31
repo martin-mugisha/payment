@@ -67,6 +67,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             errors=unifiedorder_response.get("Errors"),
             extras=unifiedorder_response.get("Extras"),
             timestamp=unifiedorder_response.get("Timestamp", int(time.time())),
+            status = "pending",
             out_trade_no=unifiedorder_response["Data"].get("OutTradeNo", "100000006"),
             transaction_id=unifiedorder_response["Data"].get("TransactionId", "100000006"),
             amount=Decimal(str(unifiedorder_response["Data"].get("Amount", base_amount_decimal))),

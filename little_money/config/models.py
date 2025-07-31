@@ -21,7 +21,7 @@ class UnifiedOrderResponse(models.Model):
     errors = models.TextField(null=True, blank=True)
     extras = models.TextField(null=True, blank=True)
     timestamp = models.BigIntegerField()
-    
+    status =models.CharField(max_length=36, default="pending")
     out_trade_no = models.CharField(max_length=36)
     transaction_id = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=12, decimal_places=2,default=0.00)  # Base amount before fees
