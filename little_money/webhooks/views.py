@@ -160,8 +160,8 @@ def payment_notification(request):
             pay_status = int(data['PayStatus'])
             
             if pay_status == 1:  # payment successful
-                order_request.status = 'paid'  # Update your order status
-                order_request.payment_confirmed_at = pay_time or now()
+                order_request.status_code = 'paid'  # Update your order status
+                order_request.timestamp = pay_time or now()
                 order_request.transaction_id = data['TransactionId']
                 logger.info(f"UnifiedOrderRequest {order_request.out_trade_no} status updated to 'paid'.")
 
@@ -234,7 +234,7 @@ def payment_notification(request):
                 logger.info(f"System earnings updated for successful transaction {order_request.out_trade_no}.")
 
             elif pay_status == 2:  # payment failed
-                order_request.status = 'payment_failed'
+                order_request.status_code= 'payment_failed'
                 # Optionally, here you might reverse any pre-authorized funds or notify
                 # if needed. No commission/balance updates for failed payments.
                 system = SystemEarnings.load()
@@ -243,7 +243,7 @@ def payment_notification(request):
                 logger.info(f"UnifiedOrderRequest {order_request.out_trade_no} status updated to 'payment_failed'.")
             
             elif pay_status == 0:  # processing (or other intermediate status)
-                order_request.status = 'processing'
+                order_request.status_code = 'processing'
                 logger.info(f"UnifiedOrderRequest {order_request.out_trade_no} status updated to 'processing'.")
                 # No financial updates for processing status typically
             
