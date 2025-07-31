@@ -1,4 +1,3 @@
-# your_project_name/webhooks/views.py
 import json
 import config.base as settings
 from datetime import datetime
@@ -18,8 +17,6 @@ from staff.models import Balance, ClientAssignment, StaffCommissionHistory
 from admins.models import AdminCommissionHistory, AdminProfile
 from finance.models import SystemEarnings
 from config.Platform import PlatformEarnings 
-
-# Import your utility for signature verification
 from config.utils import verify_signature
 
 import logging
@@ -54,7 +51,7 @@ def payment_notification(request):
             return HttpResponseBadRequest(f"Missing field: {field}")
 
     # Verify signature
-    if not verify_signature(data, PRIVATE_KEY):
+    if not verify_signature(body_unicode, PRIVATE_KEY):
         logger.info(f"Raw webhook data: {json.dumps(data, indent=2)}")
         logger.error("Signature verification failed for webhook.")
         return HttpResponse("FAILED") # Standard response for failed verification

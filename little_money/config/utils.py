@@ -1,3 +1,5 @@
+import re
+import json
 from decimal import Decimal
 import secrets
 import string
@@ -24,10 +26,20 @@ def generate_signature(params, field_order, private_key) -> str:
     to_sign += f"&privateKey={private_key}"
     return hashlib.md5(to_sign.encode('utf-8')).hexdigest()
 
+def extract_raw_pay_message(raw_body: str) -> str:
+    # Extract the raw string of PayMessage using regex (with escape chars preserved)
+    match = re.search(r'"PayMessage"\s*:\s*"((?:\\.|[^"\\])*)"', raw_body)
+    if match:
+        return match.group(1)
+    return ""
 
+def verify_signature(raw_body: str, private_key: str) -> bool:
+    try:
+        data = json.loads(raw_body)
+    except json.JSONDecodeError:
+        return False
 
-def verify_signature(data: Dict, private_key: str) -> bool:
-    webhook_field_order = [
+    field_order = [
         'PayStatus',
         'PayTime',
         'OutTradeNo',
@@ -41,33 +53,29 @@ def verify_signature(data: Dict, private_key: str) -> bool:
         'PayMessage'
     ]
 
-    to_sign_parts = []
-    for field in webhook_field_order:
-        value = data.get(field)
+    pay_message_raw = extract_raw_pay_message(raw_body)
 
-        if value is None:
-            value_str = ""
-        elif isinstance(value, (float, Decimal)):
-            value_str = f"{Decimal(value):.6f}"
+    parts = []
+    for field in field_order:
+        if field == "PayMessage":
+            parts.append(f"{field}={pay_message_raw}")
         else:
-            value_str = str(value)
+            value = data.get(field, "")
+            if isinstance(value, (float, Decimal)):
+                value = f"{Decimal(value):.6f}"
+            parts.append(f"{field}={value}")
 
-        to_sign_parts.append(f"{field}={value_str}")
+    to_sign = "&".join(parts) + f"&privateKey={private_key}"
+    calculated_md5 = hashlib.md5(to_sign.encode("utf-8")).hexdigest().lower()
+    received_md5 = data.get("Sign", "").lower()
 
-    to_sign_string = '&'.join(to_sign_parts) + f"&privateKey={private_key}"
-
-    calculated_md5 = hashlib.md5(to_sign_string.encode('utf-8')).hexdigest()
-    received_signature = str(data.get("Sign", "")).lower()
-
-    # 🔍 LOGGING FOR DEBUGGING
     print("==== Signature Debug ====")
-    print("String to sign:")
-    print(to_sign_string)
+    print("String to sign:", to_sign)
     print("Calculated MD5:", calculated_md5)
-    print("Received Sign :", received_signature)
+    print("Received Sign :", received_md5)
     print("=========================")
 
-    return calculated_md5 == received_signature
+    return calculated_md5 == received_md5
 
 def validate_signature(request_data, private_key):
     """
