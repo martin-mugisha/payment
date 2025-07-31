@@ -33,31 +33,29 @@ def verify_signature(data: Dict, private_key: str) -> bool:
         'OutTradeNo',
         'TransactionId',
         'Amount',
-        'ServiceCharge'
+        'ActualPaymentAmount',
+        'ActualCollectAmount',
+        'PayerCharge',
+        'PayeeCharge',
+        'ChannelCharge',
+        'PayMessage'
     ]
 
     to_sign_parts = []
     for field in webhook_field_order:
         value = data.get(field)
-
         if value is None:
             value_str = ""
         elif isinstance(value, (float, Decimal)):
-            value_str = f"{Decimal(value):.6f}"  # LipaPay formatting
+            value_str = f"{Decimal(value):.6f}"  # Ensure 6 decimal places
         else:
             value_str = str(value)
-
         to_sign_parts.append(f"{field}={value_str}")
 
     to_sign_string = '&'.join(to_sign_parts) + f"&privateKey={private_key}"
+
     calculated_md5 = hashlib.md5(to_sign_string.encode('utf-8')).hexdigest()
-
     received_signature = str(data.get("Sign", "")).lower()
-
-    # Optional: Logging for debugging
-    logger.info(f"Received signature: {received_signature}")
-    logger.info(f"String to sign: {to_sign_string}")
-    logger.info(f"Calculated signature: {calculated_md5}")
 
     return calculated_md5 == received_signature
 

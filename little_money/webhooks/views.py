@@ -44,8 +44,8 @@ def payment_notification(request):
         return HttpResponseBadRequest("Invalid JSON")
 
     # Basic required fields check
-    required_fields = ['PayStatus', 'OutTradeNo', 'TransactionId', 'Amount', 
-                       'ActualPaymentAmount', 'ActualCollectAmount', 'PayerCharge', 'PayeeCharge', 'Sign']
+    required_fields = ['PayStatus','PayTime','OutTradeNo','TransactionId','Amount','ActualPaymentAmount',
+                       'ActualCollectAmount','PayerCharge','PayeeCharge','ChannelCharge','PayMessage']
 
     for field in required_fields:
         if field not in data:
