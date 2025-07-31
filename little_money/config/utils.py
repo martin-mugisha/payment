@@ -27,18 +27,13 @@ def generate_signature(params, field_order, private_key) -> str:
 
 
 def verify_signature(data: Dict, private_key: str) -> bool:
-    # LipaPay callback field order (from official docs, section 3.2)
     webhook_field_order = [
         'PayStatus',
         'PayTime',
         'OutTradeNo',
         'TransactionId',
         'Amount',
-        'ActualPaymentAmount',
-        'ActualCollectAmount',
-        'PayerCharge',
-        'PayeeCharge',
-        'PayMessage'
+        'ServiceCharge'
     ]
 
     to_sign_parts = []
@@ -48,18 +43,16 @@ def verify_signature(data: Dict, private_key: str) -> bool:
         if value is None:
             value_str = ""
         elif isinstance(value, (float, Decimal)):
-            # LipaPay uses 6 decimal places consistently
-            value_str = f"{Decimal(value):.6f}"
+            value_str = f"{Decimal(value):.6f}"  # LipaPay formatting
         else:
             value_str = str(value)
 
         to_sign_parts.append(f"{field}={value_str}")
 
-    # Add private key at the end
     to_sign_string = '&'.join(to_sign_parts) + f"&privateKey={private_key}"
     calculated_md5 = hashlib.md5(to_sign_string.encode('utf-8')).hexdigest()
 
-    received_signature = data.get("Sign", "").lower()  # MD5 hex is lowercase by convention
+    received_signature = str(data.get("Sign", "")).lower()
 
     # Optional: Logging for debugging
     logger.info(f"Received signature: {received_signature}")

@@ -31,6 +31,7 @@ PRIVATE_KEY =settings.PAYMENT_AGGREGATOR_API_KEY
 @require_POST
 def payment_notification(request):
     logger.info("--- Received payment notification webhook ---")
+    print(request.body)
     if request.method != 'POST':
         logger.warning(f"Webhook received non-POST request: {request.method}")
         return HttpResponseBadRequest("Only POST allowed")
