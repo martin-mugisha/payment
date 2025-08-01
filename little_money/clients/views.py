@@ -164,7 +164,7 @@ def payments(request):
                 result_data = response.initiate_transaction()
                 init = json.loads(result_data.content)
                 if init.get('status') == 'success':
-                    messages.success(request, f'Disbursement for {name} ({phone}) successful.')
+                    messages.success(request, f'Disbursement for {name} ({phone}) initiated successful.')
                     return redirect('client:payments')
             except Exception as e:
                 message = f"failed due to{str(e)}"

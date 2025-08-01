@@ -32,3 +32,27 @@ AggregatorCredentials.objects.create(
     api_key='sandbox_key_123',    
     api_secret='sandbox_secret_abc'
     )
+
+
+
+user name ses-smtp-user.20250731-221012
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "ses:SendRawEmail",
+            "Resource": "*"
+        }
+    ]
+}
+IAM user name
+
+ses-smtp-user.20250731-221012
+SMTP user name
+
+AKIAXW6RHRJ4FUDLZZQV
+SMTP password
+
+BOfq/+P3anTeKaf9GuwOiCNCFUDbgiDr63r7luRffqgn
+Hide

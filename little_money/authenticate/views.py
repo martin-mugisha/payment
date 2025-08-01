@@ -6,6 +6,8 @@ def index(request):
     return render(request, 'index.html')
 
 # Login View
+from django.http import HttpResponse
+
 def user_login(request):
     # If user is already authenticated (session active), redirect to their dashboard
     if request.user.is_authenticated:
@@ -21,6 +23,13 @@ def user_login(request):
             return redirect('authenticate:login')
 
     if request.method == 'POST':
+        # Check if this is the forgot password form submission by checking if 'password' is missing
+        if 'password' not in request.POST:
+            username = request.POST.get('username', '')
+            messages.success(request, f"Hey {username}, request received but feature is still under development.")
+            return redirect('authenticate:login')
+
+        # Otherwise, handle login form submission
         username = request.POST['username']
         password = request.POST['password']
         user = authenticate(request, username=username, password=password)

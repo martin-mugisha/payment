@@ -54,7 +54,7 @@ def sync_mailcow_mailbox(user, password):
                 "name": f"{user.first_name} {user.last_name}",
                 "password": password,
                 "password2": password,
-                "quota": "2048",  # in MB
+                "quota": "768",  # in MB
                 "active": "1",
                 "force_pw_update": "1",
                 "tls_enforce_in": "1",
