@@ -192,11 +192,7 @@
                 class="w-full max-w-xs sm:max-w-sm flex flex-col items-center"
               >
                 <div class="mb-8">
-                  <img
-                    src="https://placehold.co/150x50/1e40af/ffffff?text=Logo"
-                    alt="Company Logo"
-                    class="h-10"
-                  />
+                  <h1 class="text-3xl font-extrabold text-center mb-2">Mangupay</h1>
                 </div>
                 {% if messages %}
                   <ul class="messages">
@@ -207,7 +203,7 @@
                   {% endif %}
                 <form method="post" class="w-full flex flex-col gap-6">
                   {% csrf_token %}
-                  <h2 class="text-3xl font-extrabold text-center mb-2">
+                  <h2 class="text-xl font-extrabold text-center mb-2">
                     Sign in to your account
                   </h2>
                   <div class="input-group flex flex-col text-left">
@@ -262,20 +258,13 @@
                 class="w-full max-w-xs sm:max-w-sm flex flex-col items-center"
               >
                 <div class="mb-8">
-                  <img
-                    src="https://placehold.co/150x50/1e40af/ffffff?text=Logo"
-                    alt="Company Logo"
-                    class="h-10"
-                  />
+                  <h1 class="text-3xl font-extrabold text-center mb-2">Mangupay</h1>
                 </div>
                 <form method="post" class="w-full flex flex-col gap-6">
                   {% csrf_token %}
-                  <h2 class="text-3xl font-extrabold text-center mb-2">
+                  <h2 class="text-xl font-extrabold text-center mb-2">
                     Forgot your password?
                   </h2>
-                  <p class="text-center text-slate-600 mb-4 text-sm">
-                    Enter your username to receive a password reset link.
-                  </p>
                   <div class="input-group flex flex-col text-left">
                     <label for="username_forgot" class="font-semibold mb-1"
                       >Username:</label
