@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to AWS EC2
 
 on:
   push:
@@ -9,16 +9,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Recreate PEM file from base64 secret
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PEM_KEY_BASE64 }}" | base64 -d > ~/.ssh/aws-key.pem
+          chmod 600 ~/.ssh/aws-key.pem
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ubuntu
-          key: ${{ secrets.SSH_KEY }}
-          known_hosts: ${{ secrets.KNOWN_HOSTS }}
-          script: |
-            cd /home/ubuntu/payment
-            bash deploy.sh
+      - name: Add server to known_hosts
+        run: |
+          ssh-keyscan ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run deploy script on EC2
+        run: |
+          ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=yes ubuntu@${{ secrets.HOST }} 'cd /home/ubuntu/payment && bash deploy.sh'
