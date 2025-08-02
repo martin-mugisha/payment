@@ -30,7 +30,7 @@ def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
     field_order = [
         'PayStatus', 'PayTime', 'OutTradeNo', 'TransactionId',
         'Amount', 'ActualPaymentAmount', 'ActualCollectAmount',
-        'PayerCharge', 'PayeeCharge', 'ChannelCharge'
+        'PayerCharge', 'PayeeCharge'
     ]
 
     sign_parts = []

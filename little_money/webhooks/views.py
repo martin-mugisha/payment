@@ -46,7 +46,7 @@ def payment_notification(request):
     # Required fields check (excluding PayMessage)
     required_fields = ['PayStatus', 'PayTime', 'OutTradeNo', 'TransactionId',
                     'Amount', 'ActualPaymentAmount', 'ActualCollectAmount',
-                    'PayerCharge', 'PayeeCharge', 'ChannelCharge']
+                    'PayerCharge', 'PayeeCharge']
 
     for field in required_fields:
         if field not in data:
