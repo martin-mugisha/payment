@@ -1,12 +1,9 @@
-import re
-import json
+import hashlib
 import secrets
 import string
-import hashlib
 import logging
 import time
 from typing import Dict, Any
-from venv import logger
 from jsonschema import validate, ValidationError
 from datetime import datetime
 import pytz
@@ -24,9 +21,12 @@ def generate_signature(params, field_order, private_key) -> str:
     to_sign += f"&privateKey={private_key}"
     return hashlib.md5(to_sign.encode('utf-8')).hexdigest()
 
-def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
-    import hashlib
+def format_number(value):
+    if isinstance(value, float):
+        return f"{value:.6f}"  
+    return str(value)
 
+def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
     field_order = [
         'PayStatus', 'PayTime', 'OutTradeNo', 'TransactionId',
         'Amount', 'ActualPaymentAmount', 'ActualCollectAmount',
@@ -37,7 +37,8 @@ def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
     for field in field_order:
         value = data.get(field)
         if value is not None:
-            sign_parts.append(f"{field}={str(value)}")
+            sign_parts.append(f"{field}={format_number(value)}")
+            print(f"{field}: {format_number(data.get(field))}")
 
     sign_parts.append(f"privateKey={private_key}")
     to_sign = '&'.join(sign_parts)
@@ -48,6 +49,7 @@ def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
     print("Calculated MD5:", calculated_md5)
     print("Received Sign :", data.get("Sign"))
     print("=========================")
+
 
     return calculated_md5 == data.get("Sign")
 
