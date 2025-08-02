@@ -7,7 +7,7 @@ from typing import Dict, Any
 from jsonschema import validate, ValidationError
 from datetime import datetime
 import pytz
-
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 # Global counter
@@ -22,8 +22,8 @@ def generate_signature(params, field_order, private_key) -> str:
     return hashlib.md5(to_sign.encode('utf-8')).hexdigest()
 
 def format_number(value):
-    if isinstance(value, float):
-        return f"{value:.6f}"  
+    if isinstance(value, (int, float, Decimal)):
+        return f"{float(value):.6f}"
     return str(value)
 
 def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
