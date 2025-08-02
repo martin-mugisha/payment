@@ -17,7 +17,7 @@ from staff.models import Balance, ClientAssignment, StaffCommissionHistory
 from admins.models import AdminCommissionHistory, AdminProfile
 from finance.models import SystemEarnings
 from config.Platform import PlatformEarnings 
-from config.utils import verify_signature, extract_raw_pay_message
+from config.utils import verify_signature
 
 import logging
 logger = logging.getLogger(__name__)
