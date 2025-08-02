@@ -29,6 +29,7 @@ PRIVATE_KEY =settings.PAYMENT_AGGREGATOR_API_KEY
 def payment_notification(request):
     logger.info("--- Received payment notification webhook ---")
     print(request.body)
+
     if request.method != 'POST':
         logger.warning(f"Webhook received non-POST request: {request.method}")
         return HttpResponseBadRequest("Only POST allowed")
@@ -36,28 +37,34 @@ def payment_notification(request):
     try:
         body_unicode = request.body.decode('utf-8')
         data = json.loads(body_unicode)
-        is_valid = verify_signature(data, PRIVATE_KEY, raw_body=body_unicode)
-        print(is_valid)
+        is_valid = verify_signature(data, PRIVATE_KEY)
         logger.info(f"Webhook payload: {data}")
     except json.JSONDecodeError:
         logger.error("Invalid JSON payload received in webhook.")
         return HttpResponseBadRequest("Invalid JSON")
 
-    # Basic required fields check
-    required_fields = ['PayStatus','PayTime','OutTradeNo','TransactionId','Amount','ActualPaymentAmount',
-                       'ActualCollectAmount','PayerCharge','PayeeCharge','ChannelCharge','PayMessage']
+    # Required fields check (excluding PayMessage)
+    required_fields = ['PayStatus', 'PayTime', 'OutTradeNo', 'TransactionId',
+                    'Amount', 'ActualPaymentAmount', 'ActualCollectAmount',
+                    'PayerCharge', 'PayeeCharge', 'ChannelCharge']
 
     for field in required_fields:
         if field not in data:
             logger.error(f"Missing required field in webhook payload: {field}")
             return HttpResponseBadRequest(f"Missing field: {field}")
 
-    # Verify signature
     if not is_valid:
         logger.info(f"Raw webhook data: {json.dumps(data, indent=2)}")
         logger.error("Signature verification failed for webhook.")
-        return HttpResponse("FAILED") # Standard response for failed verification
+        return HttpResponse("FAILED")
 
+    # Optionally log PayMessage
+    pay_message = data.get("PayMessage")
+    if pay_message:
+        logger.info(f"PayMessage: {pay_message}")
+
+    # Signature valid – proceed with processing
+    logger.info("Signature verification passed.")
     # Parse PayTime safely
     pay_time = None
     if 'PayTime' in data and data['PayTime']:
