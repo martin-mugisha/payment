@@ -44,11 +44,12 @@ def verify_signature(data: Dict[str, Any], private_key: str) -> bool:
     to_sign = '&'.join(sign_parts)
     calculated_md5 = hashlib.md5(to_sign.encode('utf-8')).hexdigest()
 
-    print("==== Signature Debug ====")
-    print("String to sign:", to_sign)
-    print("Calculated MD5:", calculated_md5)
-    print("Received Sign :", data.get("Sign"))
-    print("=========================")
+    logger.info("==== Signature Debug ====")
+    logger.info(f"String to sign: {to_sign}")
+    logger.info(f"Calculated MD5: {calculated_md5}")
+    logger.info(f"Received Sign : {data.get('Sign')}")
+    logger.info("=========================")
+
 
 
     return calculated_md5 == data.get("Sign")
