@@ -22,3 +22,4 @@ jobs:
       - name: Run deploy script on EC2
         run: |
           ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=yes ubuntu@${{ secrets.HOST }} 'cd /home/ubuntu/payment && bash deploy.sh'
+
