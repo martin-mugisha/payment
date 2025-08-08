@@ -37,9 +37,7 @@
         </span>
       </td>
       <td>
-        <button class="btn-download-receipt" onclick="downloadReceipt('{{ txn.id|default:"0" }}')" title="Download Receipt">
-          Receipt
-        </button>
+        <button onclick="downloadReceipt('{{ txn.transaction_id }}')">Download Receipt</button>
       </td>
     </tr>
     {% empty %}
@@ -127,14 +125,13 @@
 
 <script>
 function downloadStatements() {
-  // Placeholder for download statement functionality
-  alert('Download statement functionality will be implemented here');
+  window.location.href = "{% url 'download_statement' %}";
 }
 
 function downloadReceipt(transactionId) {
-  // Placeholder for download receipt functionality
-  alert('Download receipt for transaction: ' + transactionId);
+  window.location.href = `/client/transactions/receipt/${transactionId}/`;
 }
 </script>
+
 
 {% endblock %}

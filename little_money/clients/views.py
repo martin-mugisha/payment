@@ -3,7 +3,8 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
-
+from reportlab.pdfgen import canvas
+from django.http import HttpResponse
 from config.transaction_orchestrator import PaymentInitiator
 from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry, DailyPayment
 from django.utils.timezone import now, localdate
@@ -16,6 +17,9 @@ from decimal import Decimal, InvalidOperation
 from django.contrib.auth import update_session_auth_hash
 from .forms import ClientProfileForm, ClientPasswordChangeForm, NotificationPreferencesForm
 from finance.models import SystemEarnings
+import openpyxl
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
 
 def is_all_zero(data):
     """Check if all values in the data list are zero."""
@@ -111,7 +115,8 @@ def overview_dashboard(request):
     }
     return render(request, 'dashboard/overview.html', context)
 
-
+@login_required
+@user_passes_test(is_client)
 def transactions(request):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
     transaction_history = RecentTransaction.objects.filter(client=client).order_by('-date')
@@ -121,17 +126,67 @@ def transactions(request):
     }
     return render(request, 'dashboard/transactions.html', context)
 
+@login_required
+@user_passes_test(is_client)
 def download_statement(request):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
-    transactions = RecentTransaction.objects.filter(client=client).order_by('-date')
-    # Placeholder for download statement functionality
-    return render(request, 'dashboard/transactions.html', {'client': client, 'transactions': transactions})
+    transactions = RecentTransaction.objects.filter(client=client).order_by('-date')[:20]
 
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Transaction History"
+
+    headers = ['Date', 'Time', 'Amount', 'Recipient', 'Phone', 'Status', 'Method', 'Transaction ID']
+    ws.append(headers)
+
+    for txn in transactions:
+        ws.append([
+            txn.date,
+            txn.time,
+            str(txn.amount),
+            txn.recipient,
+            txn.phone,
+            txn.status,
+            txn.payment_method,
+            txn.transaction_id
+        ])
+
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 20
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="transaction_statement.xlsx"'
+    wb.save(response)
+    return response
+
+@login_required
+@user_passes_test(is_client)
 def download_receipt(request, transaction_id):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
     transaction = RecentTransaction.objects.filter(client=client, transaction_id=transaction_id).first()
-    # Placeholder for download receipt functionality
-    return render(request, 'dashboard/transactions.html', {'client': client, 'transaction': transaction})
+    
+    if not transaction:
+        return HttpResponse("Transaction not found", status=404)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="receipt_{transaction_id}.pdf"'
+
+    p = canvas.Canvas(response, pagesize=(300, 400))  # Narrow PDF size
+    p.setFont("Helvetica", 10)
+
+    p.drawString(50, 370, f"Transaction ID: {transaction.transaction_id or 'N/A'}")
+    p.drawString(50, 350, f"Date: {transaction.date}")
+    p.drawString(50, 330, f"Time: {transaction.time}")
+    p.drawString(50, 310, f"Amount: KES {transaction.amount}")
+    p.drawString(50, 290, f"Recipient: {transaction.recipient}")
+    p.drawString(50, 270, f"Phone: {transaction.phone or 'N/A'}")
+    p.drawString(50, 250, f"Status: {transaction.status}")
+    p.drawString(50, 230, f"Method: {transaction.payment_method or 'N/A'}")
+    p.drawString(50, 210, f"Description: {transaction.description or 'None'}")
+
+    p.showPage()
+    p.save()
+    return response
 
 @login_required
 @user_passes_test(is_client)
