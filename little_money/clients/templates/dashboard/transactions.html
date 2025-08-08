@@ -45,9 +45,18 @@
 
 
 
-<!-- Download Statement Button moved to top right -->
-<div style="text-align: right; margin-bottom: 20px;">
-  <button class="btn-download-statement" onclick="downloadStatements()">Download Excel</button>
+<!-- Search & Download Row -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+  <input 
+    type="text" 
+    id="tableSearch" 
+    placeholder="Search by Recipient, Transaction ID, or Phone Number..." 
+    style="padding: 8px 12px; width: 350px; border-radius: 5px; border: 1px solid #ccc;"
+  >
+  
+  <button class="btn-download-statement" onclick="downloadStatements()">
+    Download Excel
+  </button>
 </div>
 
 {% load humanize %}
@@ -167,6 +176,27 @@ function downloadStatements() {
 function downloadReceipt(transactionId) {
   window.location.href = `/client/transactions/receipt/${transactionId}/`;
 }
+document.getElementById("tableSearch").addEventListener("keyup", function() {
+    let filter = this.value.toLowerCase().trim();
+    let rows = document.querySelectorAll(".data-table tbody tr");
+
+    rows.forEach(row => {
+        let transactionId = row.cells[0]?.textContent.toLowerCase().trim() || "";
+        let recipient = row.cells[3]?.textContent.toLowerCase().trim().replace(/\s+/g, " ") || "";
+        let phone = row.cells[4]?.textContent.toLowerCase().trim() || "";
+
+        if (
+            recipient.includes(filter) ||
+            transactionId.includes(filter) ||
+            phone.includes(filter)
+        ) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+});
+
 </script>
 
 {% endblock %}
