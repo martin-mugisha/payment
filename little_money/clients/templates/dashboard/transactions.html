@@ -125,7 +125,7 @@
 
 <script>
 function downloadStatements() {
-  window.location.href = "{% url 'download_statement' %}";
+  window.location.href = "{% url 'client:download_statement' %}";
 }
 
 function downloadReceipt(transactionId) {
