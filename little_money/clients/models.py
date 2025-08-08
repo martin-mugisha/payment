@@ -1,3 +1,4 @@
+from datetime import timezone
 from core.models import CustomUser
 from django.db import models
 from django.core.validators import MinValueValidator
