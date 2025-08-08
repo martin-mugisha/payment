@@ -53,7 +53,7 @@ class RecentTransaction(models.Model):
         ('Pending', 'Pending'),
         ('Success', 'Success'),
         ('Failed', 'Failed'),
-        ('Processing', 'Processing'),
+        ('Processing', 'Processing'), 
     ])
     transaction_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
     payment_method = models.CharField(max_length=20, blank=True, null=True)

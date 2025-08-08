@@ -63,9 +63,9 @@ class ClientAssignment(models.Model):
 
 class Transaction(models.Model):
     recent_transaction = models.OneToOneField(
-        RecentTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='linked_transaction'
+        'clients.RecentTransaction', on_delete=models.SET_NULL, null=True, blank=True, related_name='linked_transaction'
     )
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, null=True, blank=True)
+    staff = models.ForeignKey('Staff', on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=50)
     reason = models.CharField(max_length=255)
@@ -74,6 +74,40 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"Transaction {self.name} - {self.status} - {self.amount}"
+
+    # === Helper properties for display ===
+    @property
+    def client_name(self):
+        return self.recent_transaction.client.name if self.recent_transaction else None
+
+    @property
+    def transaction_id(self):
+        return self.recent_transaction.transaction_id if self.recent_transaction else None
+
+    @property
+    def date(self):
+        return self.recent_transaction.date if self.recent_transaction else None
+
+    @property
+    def time(self):
+        return self.recent_transaction.time if self.recent_transaction else None
+
+    @property
+    def recipient(self):
+        return self.recent_transaction.recipient if self.recent_transaction else None
+
+    @property
+    def phone_number(self):
+        return self.recent_transaction.phone if self.recent_transaction else None
+
+    @property
+    def transaction_type(self):
+        return self.recent_transaction.transaction_type if self.recent_transaction else None
+
+    @property
+    def channel(self):
+        return self.recent_transaction.payment_method if self.recent_transaction else None
+
 
 class StaffCommissionHistory(models.Model):
     percentage = models.DecimalField(max_digits=5, decimal_places=2)

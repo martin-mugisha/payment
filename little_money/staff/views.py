@@ -14,7 +14,7 @@ from .models import Staff, Transaction, Balance, WithdrawHistory
 from django.db.models import Sum
 from django.utils.timezone import localdate
 from django.http import HttpResponse
-from core.utils import is_staff
+from core.utils import generate_statement_xlsx, is_staff
 from django.contrib.auth import update_session_auth_hash
 from django.contrib import messages
 from django.shortcuts import redirect, render
@@ -188,11 +188,77 @@ def balance(request):
 @user_passes_test(is_staff)
 def transactions(request):
     transactions_list = Transaction.objects.all()
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    transaction_type = request.GET.get('transaction_type')
+    channel = request.GET.get('channel')
+    recipient = request.GET.get('recipient')
+    phone = request.GET.get('phone')
+
+    if start_date:
+        transactions_list = transactions_list.filter(recent_transaction__date__gte=start_date)
+    if end_date:
+        transactions_list = transactions_list.filter(recent_transaction__date__lte=end_date)
+    if transaction_type:
+        transactions_list = transactions_list.filter(recent_transaction__transaction_type__icontains=transaction_type)
+    if channel:
+        transactions_list = transactions_list.filter(recent_transaction__payment_method__icontains=channel)
+    if recipient:
+        transactions_list = transactions_list.filter(recent_transaction__recipient__icontains=recipient)
+    if phone:
+        transactions_list = transactions_list.filter(recent_transaction__phone__icontains=phone)
+
+    # KPI counts
+    total_count = transactions_list.count()
+    success_count = transactions_list.filter(status__iexact="Success").count()
+    pending_count = transactions_list.filter(status__iexact="Pending").count()
+    failed_count = transactions_list.filter(status__iexact="Failed").count()
 
     context = {
         'transactions': transactions_list,
+        'total_count': total_count,
+        'success_count': success_count,
+        'pending_count': pending_count,
+        'failed_count': failed_count,
     }
     return render(request, 'dashboard/transaction.html', context)
+
+@login_required
+@user_passes_test(is_staff)
+def download_statement(request):
+    transactions = Transaction.objects.all()
+
+    # Apply same filters as the HTML table
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    transaction_type = request.GET.get('transaction_type')
+    channel = request.GET.get('channel')
+    recipient = request.GET.get('recipient')
+    phone = request.GET.get('phone')
+
+    if start_date:
+        transactions = transactions.filter(date__gte=start_date)
+    if end_date:
+        transactions = transactions.filter(date__lte=end_date)
+    if transaction_type:
+        transactions = transactions.filter(transaction_type__icontains=transaction_type)
+    if channel:
+        transactions = transactions.filter(payment_method__icontains=channel)
+    if recipient:
+        transactions = transactions.filter(recipient__icontains=recipient)
+    if phone:
+        transactions = transactions.filter(phone__icontains=phone)
+
+    # Generate Excel
+    output = generate_statement_xlsx(transactions)
+
+    # Return as download
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="transactions.xlsx"'
+    return response
 
 @login_required
 @user_passes_test(is_staff)

@@ -1,27 +1,167 @@
-{% extends "dashboard/base_staff.html" %} {% block content %}
-<h1>Transactions</h1>
-<p>Total Transactions: {{ transactions|length }}</p>
+{% extends "dashboard/base_staff.html" %}
+{% block content %}
 
+<h1>Transactions</h1>
+<div class="kpi-cards" style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px;">
+  <section class="kpi-card" style="background: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center;">
+    <h3>Total Transactions</h3>
+    <p>{{ total_count }}</p>
+  </section>
+
+  <section class="kpi-card" style="background: #d4edda; padding: 20px; border-radius: 8px; text-align: center;">
+    <h3>Successful</h3>
+    <p>{{ success_count }}</p>
+  </section>
+
+  <section class="kpi-card" style="background: #fff3cd; padding: 20px; border-radius: 8px; text-align: center;">
+    <h3>Pending</h3>
+    <p>{{ pending_count }}</p>
+  </section>
+
+  <section class="kpi-card" style="background: #f8d7da; padding: 20px; border-radius: 8px; text-align: center;">
+    <h3>Failed</h3>
+    <p>{{ failed_count }}</p>
+  </section>
+</div>
+
+<!-- Filters Form -->
+<form id="filterForm" method="get" style="display: flex; align-items: center; gap: 20px; white-space: nowrap; overflow-x: auto; padding-bottom: 10px; width: 100%; max-width:fit-content; margin: 0 auto;">
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="start_date" style="min-width: 80px;">Start Date</label>
+    <input type="date" name="start_date" id="start_date" value="{{ request.GET.start_date }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="end_date" style="min-width: 80px;">End Date</label>
+    <input type="date" name="end_date" id="end_date" value="{{ request.GET.end_date }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="transaction_type" style="min-width: 110px;">Transaction Type</label>
+    <input type="text" name="transaction_type" id="transaction_type" value="{{ request.GET.transaction_type }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="e.g. Cash In">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="channel" style="min-width: 60px;">Channel</label>
+    <input type="text" name="channel" id="channel" value="{{ request.GET.channel }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="e.g. MTN">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="recipient" style="min-width: 70px;">Recipient</label>
+    <input type="text" name="recipient" id="recipient" value="{{ request.GET.recipient }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Recipient name">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="phone" style="min-width: 90px;">Phone Number</label>
+    <input type="text" name="phone" id="phone" value="{{ request.GET.phone }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="e.g. 0701234567">
+  </div>
+
+  <button type="submit" class="btn-download-statement" style="padding: 8px 18px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: background-color 0.3s;">
+    Filter
+  </button>
+
+</form>
+
+
+
+<!-- Download Statement Button moved to top right -->
+<div style="text-align: right; margin-bottom: 20px;">
+  <button class="btn-download-statement" onclick="downloadStatements()">Download Excel</button>
+</div>
+
+{% load humanize %}
 <table class="data-table">
   <thead>
     <tr>
-      <th>Name</th>
-      <th>Number</th>
-      <th>Status</th>
-      <th>Reason</th>
+      <th>Client Name</th>
+      <th>Transaction ID</th>
+      <th>Date</th>
+      <th>Time</th>
+      <th>Recipient</th>
+      <th>Phone Number</th>
       <th>Amount (UGX)</th>
+      <th>Transaction Type</th>
+      <th>Channel</th>
+      <th>Status</th>
     </tr>
   </thead>
   <tbody>
     {% for t in transactions %}
     <tr>
-      <td>{{ t.name }}</td>
-      <td>{{ t.number }}</td>
-      <td>{{ t.status }}</td>
-      <td>{{ t.reason }}</td>
-      <td>{{ t.amount }}</td>
+      <td>{{ t.recent_transaction.client.name }}</td>
+      <td>{{ t.recent_transaction.transaction_id }}</td>
+      <td>{{ t.recent_transaction.date }}</td>
+      <td>{{ t.recent_transaction.time }}</td>
+      <td>{{ t.recent_transaction.recipient }}</td>
+      <td>{{ t.recent_transaction.phone }}</td>
+      <td>{{ t.amount|floatformat:0|intcomma }}</td>
+      <td>{{ t.recent_transaction.transaction_type }}</td>
+      <td>{{ t.recent_transaction.payment_method }}</td>
+      <td><span class="status-badge status-{{ txn.status|lower|default:"pending" }}">
+          {{ t.status|default:"Pending" }}
+        </span></td>
     </tr>
     {% endfor %}
   </tbody>
+  {% if transactions|length == 0 %}
+<tr>
+  <td colspan="10" style="text-align:center; color: #444343;">No transactions found.</td>
+</tr>
+{% endif %}
 </table>
+<style>
+
+/* Status badges */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-failed {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Download buttons */
+.btn-download-statement {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.btn-download-statement:hover {
+  background-color: #0056b3;
+}
+</style>
+<script>
+function getFilterQueryParams() {
+  const form = document.getElementById('filterForm');
+  const params = new URLSearchParams(new FormData(form));
+  return params.toString();
+}
+
+function downloadStatements() {
+  const queryParams = getFilterQueryParams();
+  window.location.href = "{% url 'staff:download_statement' %}?" + queryParams;
+}
+</script>
+
 {% endblock %}
