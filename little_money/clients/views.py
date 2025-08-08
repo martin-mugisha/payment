@@ -4,6 +4,10 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+
 from django.http import HttpResponse
 from config.transaction_orchestrator import PaymentInitiator
 from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry, DailyPayment
@@ -164,25 +168,52 @@ def download_statement(request):
 def download_receipt(request, transaction_id):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
     transaction = RecentTransaction.objects.filter(client=client, transaction_id=transaction_id).first()
-    
+
     if not transaction:
         return HttpResponse("Transaction not found", status=404)
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="receipt_{transaction_id}.pdf"'
 
-    p = canvas.Canvas(response, pagesize=(300, 400))  # Narrow PDF size
-    p.setFont("Helvetica", 10)
+    # Use a standard page size for better design flexibility
+    p = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
 
-    p.drawString(50, 370, f"Transaction ID: {transaction.transaction_id or 'N/A'}")
-    p.drawString(50, 350, f"Date: {transaction.date}")
-    p.drawString(50, 330, f"Time: {transaction.time}")
-    p.drawString(50, 310, f"Amount: UGX. {transaction.amount}")
-    p.drawString(50, 290, f"Recipient: {transaction.recipient}")
-    p.drawString(50, 270, f"Phone: {transaction.phone or 'N/A'}")
-    p.drawString(50, 250, f"Status: {transaction.status}")
-    p.drawString(50, 230, f"Method: {transaction.payment_method or 'N/A'}")
-    p.drawString(50, 210, f"Description: {transaction.description or 'None'}")
+    # --- Header Section ---
+    p.setFont("Helvetica-Bold", 16)
+    p.setFillColor(colors.darkblue)
+    p.drawString(inch, height - inch, "Payment Receipt")
+
+    p.setFont("Helvetica", 10)
+    p.setFillColor(colors.black)
+    p.drawString(inch, height - inch - 20, "Your Company Name")
+
+    # Add a line to separate the header from the details
+    p.line(inch, height - inch - 30, width - inch, height - inch - 30)
+
+    # --- Details Section ---
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(inch, height - inch - 60, "Transaction Details:")
+
+    p.setFont("Helvetica", 10)
+    y_position = height - inch - 90  # Starting Y position for details
+    line_height = 20  # Spacing between lines
+
+    p.drawString(inch, y_position, f"Transaction ID: {transaction.transaction_id or 'N/A'}")
+    p.drawString(inch, y_position - line_height, f"Date: {transaction.date}")
+    p.drawString(inch, y_position - 2 * line_height, f"Time: {transaction.time}")
+    p.drawString(inch, y_position - 3 * line_height, f"Amount: UGX. {transaction.amount}")
+    p.drawString(inch, y_position - 4 * line_height, f"Recipient: {transaction.recipient}")
+    p.drawString(inch, y_position - 5 * line_height, f"Phone: {transaction.phone or 'N/A'}")
+    p.drawString(inch, y_position - 6 * line_height, f"Status: {transaction.status}")
+    p.drawString(inch, y_position - 7 * line_height, f"Method: {transaction.payment_method or 'N/A'}")
+    p.drawString(inch, y_position - 8 * line_height, f"Description: {transaction.description or 'None'}")
+
+    # --- Footer Section ---
+    p.setFont("Helvetica-Oblique", 8)
+    p.setFillColor(colors.gray)
+    p.drawString(inch, inch, "Thank you for your business!")
+    p.drawCentredString(width / 2, 0.5 * inch, "Generated on " + str(datetime.now()))
 
     p.showPage()
     p.save()
