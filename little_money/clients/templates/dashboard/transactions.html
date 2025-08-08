@@ -4,27 +4,137 @@
 {% block content %}
 <h2>Transaction History</h2>
 
-<table>
+<!-- Download Statement Button moved to top right -->
+<div style="text-align: right; margin-bottom: 20px;">
+  <button class="btn-download-statement" onclick="downloadStatements()">
+    Download Statement
+  </button>
+</div>
+
+<table class="transaction-table">
   <thead>
     <tr>
       <th>Date</th>
+      <th>Time</th>
       <th>Amount</th>
       <th>Recipient</th>
       <th>Phone Number</th>
+      <th>Status</th>
+      <th>Action</th>
     </tr>
   </thead>
   <tbody>
     {% for txn in transaction_history %}
     <tr>
-      <td>{{ txn.date }}</td>
-      <td>{{ txn.amount }}</td>
-      <td>{{ txn.recipient }}</td>
-      <td>{{ txn.phone }}</td>
+      <td>{{ txn.date|default:"--" }}</td>
+      <td>{{ txn.time|default:"--:--" }}</td>
+      <td>{{ txn.amount|default:"0.00" }}</td>
+      <td>{{ txn.recipient|default:"--" }}</td>
+      <td>{{ txn.phone|default:"--" }}</td>
+      <td>
+        <span class="status-badge status-{{ txn.status|lower|default:"pending" }}">
+          {{ txn.status|default:"Pending" }}
+        </span>
+      </td>
+      <td>
+        <button class="btn-download-receipt" onclick="downloadReceipt('{{ txn.id|default:"0" }}')" title="Download Receipt">
+          Receipt
+        </button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="7" style="text-align: center; padding: 20px;">No transactions found</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
-<button>Download Statements</button>
-<button>Download Receipts</button>
+<style>
+/* Table styling */
+.transaction-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.transaction-table th,
+.transaction-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.transaction-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+/* Status badges */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-failed {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Download buttons */
+.btn-download-statement {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.btn-download-statement:hover {
+  background-color: #0056b3;
+}
+
+.btn-download-receipt {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.btn-download-receipt:hover {
+  background-color: #1e7e34;
+}
+</style>
+
+<script>
+function downloadStatements() {
+  // Placeholder for download statement functionality
+  alert('Download statement functionality will be implemented here');
+}
+
+function downloadReceipt(transactionId) {
+  // Placeholder for download receipt functionality
+  alert('Download receipt for transaction: ' + transactionId);
+}
+</script>
+
 {% endblock %}

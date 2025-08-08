@@ -121,6 +121,18 @@ def transactions(request):
     }
     return render(request, 'dashboard/transactions.html', context)
 
+def download_statement(request):
+    client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+    transactions = RecentTransaction.objects.filter(client=client).order_by('-date')
+    # Placeholder for download statement functionality
+    return render(request, 'dashboard/transactions.html', {'client': client, 'transactions': transactions})
+
+def download_receipt(request, transaction_id):
+    client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+    transaction = RecentTransaction.objects.filter(client=client, transaction_id=transaction_id).first()
+    # Placeholder for download receipt functionality
+    return render(request, 'dashboard/transactions.html', {'client': client, 'transaction': transaction})
+
 @login_required
 @user_passes_test(is_client)
 def payments(request):

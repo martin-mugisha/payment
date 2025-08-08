@@ -44,15 +44,27 @@ class Finances(models.Model):
 class RecentTransaction(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='recent_transactions')
     date = models.DateField()
+    time = models.TimeField(blank=True, null=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     recipient = models.CharField(max_length=255)
     phone = models.CharField(max_length=20, blank=True, null=True)
+    status = models.CharField(max_length=20, default='Pending', choices=[
+        ('Pending', 'Pending'),
+        ('Success', 'Success'),
+        ('Failed', 'Failed'),
+        ('Processing', 'Processing'),
+    ])
+    transaction_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    payment_method = models.CharField(max_length=20, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.client.name} - {self.recipient} - {self.amount}"
+        return f"{self.client.name} - {self.recipient} - {self.amount} - {self.status}"
  
     class Meta:
-        ordering = ['-date']
+        ordering = ['-date', '-created_at']
 
 class UpcomingPayment(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='upcoming_payments')
