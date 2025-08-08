@@ -136,16 +136,16 @@ def download_statement(request):
     ws = wb.active
     ws.title = "Transaction History"
 
-    headers = ['Date', 'Time', 'Amount', 'Recipient', 'Phone', 'Status', 'Method', 'Transaction ID']
+    headers = ['Date', 'Time', 'Recipient', 'Phone', 'Amount', 'Status', 'Method', 'Transaction ID']
     ws.append(headers)
 
     for txn in transactions:
         ws.append([
             txn.date,
             txn.time,
-            str(txn.amount),
             txn.recipient,
             txn.phone,
+            str(txn.amount),
             txn.status,
             txn.payment_method,
             txn.transaction_id
@@ -177,7 +177,7 @@ def download_receipt(request, transaction_id):
     p.drawString(50, 370, f"Transaction ID: {transaction.transaction_id or 'N/A'}")
     p.drawString(50, 350, f"Date: {transaction.date}")
     p.drawString(50, 330, f"Time: {transaction.time}")
-    p.drawString(50, 310, f"Amount: KES {transaction.amount}")
+    p.drawString(50, 310, f"Amount: UGX. {transaction.amount}")
     p.drawString(50, 290, f"Recipient: {transaction.recipient}")
     p.drawString(50, 270, f"Phone: {transaction.phone or 'N/A'}")
     p.drawString(50, 250, f"Status: {transaction.status}")
