@@ -4,69 +4,98 @@
 {% block content %}
 <h2>Transaction History</h2>
 
+<!-- Filters Form -->
+<form id="filterForm" method="get" style="display: flex; align-items: center; gap: 20px; white-space: nowrap; overflow-x: auto; padding-bottom: 10px; width: 100%; max-width:fit-content; margin: 0 auto;">
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="start_date" style="min-width: 80px;">Start Date</label>
+    <input type="date" name="start_date" id="start_date" value="{{ request.GET.start_date }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="end_date" style="min-width: 80px;">End Date</label>
+    <input type="date" name="end_date" id="end_date" value="{{ request.GET.end_date }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="transaction_type" style="min-width: 110px;">Transaction Type</label>
+    <input type="text" name="transaction_type" id="transaction_type" value="{{ request.GET.transaction_type }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="e.g. Cash In">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="channel" style="min-width: 60px;">Channel</label>
+    <input type="text" name="channel" id="channel" value="{{ request.GET.channel }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="e.g. MTN">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="recipient" style="min-width: 70px;">Recipient</label>
+    <input type="text" name="recipient" id="recipient" value="{{ request.GET.recipient }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Recipient name">
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 5px;">
+    <label for="phone" style="min-width: 90px;">Phone Number</label>
+    <input type="text" name="phone" id="phone" value="{{ request.GET.phone }}" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="e.g. 0701234567">
+  </div>
+
+  <button type="submit" class="btn-download-statement" style="padding: 8px 18px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: background-color 0.3s;">
+    Filter
+  </button>
+
+</form>
+
+
+
 <!-- Download Statement Button moved to top right -->
 <div style="text-align: right; margin-bottom: 20px;">
-  <button class="btn-download-statement" onclick="downloadStatements()">
-    Download Statement
-  </button>
+  <button class="btn-download-statement" onclick="downloadStatements()">Download Excel</button>
 </div>
+
+{% load humanize %}
 
 <table class="data-table">
   <thead>
     <tr>
-      <th>Date</th>
-      <th>Time</th>
-      <th>Recipient</th>
-      <th>Phone Number</th>
-      <th>Amount</th>
-      <th>Status</th>
-      <th>Action</th>
+      <th scope="col">Transaction ID</th>
+      <th scope="col">Date</th>
+      <th scope="col">Time</th>
+      <th scope="col">Recipient</th>
+      <th scope="col">Phone Number</th>
+      <th scope="col">Amount</th>
+      <th scope="col">Transaction Type</th>
+      <th scope="col">Channel</th>
+      <th scope="col">Status</th>
+      <th scope="col">Action</th>
     </tr>
   </thead>
   <tbody>
     {% for txn in transaction_history %}
     <tr>
+      <td>{{ txn.transaction_id }}</td>
       <td>{{ txn.date|default:"--" }}</td>
       <td>{{ txn.time|default:"--:--" }}</td>
       <td>{{ txn.recipient|default:"--" }}</td>
       <td>{{ txn.phone|default:"--" }}</td>
-      <td>{{ txn.amount|default:"0.00" }}</td>
+      <td>{{ txn.amount|floatformat:2|intcomma|default:"0.00" }}</td>
+      <td>{{ txn.transaction_type|default:"--" }}</td>
+      <td>{{ txn.payment_method|default:"--" }}</td>
       <td>
         <span class="status-badge status-{{ txn.status|lower|default:"pending" }}">
           {{ txn.status|default:"Pending" }}
         </span>
       </td>
       <td>
-        <button onclick="downloadReceipt('{{ txn.transaction_id }}')">Download Receipt</button>
+        <button class="btn-download-receipt" onclick="downloadReceipt('{{ txn.transaction_id }}')">Download Receipt</button>
       </td>
     </tr>
     {% empty %}
     <tr>
-      <td colspan="7" style="text-align: center; padding: 20px;">No transactions found</td>
+      <td colspan="10" style="text-align: center; padding: 20px;">No transactions found</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
 <style>
-/* Table styling */
-.transaction-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-.transaction-table th,
-.transaction-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.transaction-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
 
 /* Status badges */
 .status-badge {
@@ -124,14 +153,20 @@
 </style>
 
 <script>
+function getFilterQueryParams() {
+  const form = document.getElementById('filterForm');
+  const params = new URLSearchParams(new FormData(form));
+  return params.toString();
+}
+
 function downloadStatements() {
-  window.location.href = "{% url 'client:download_statement' %}";
+  const queryParams = getFilterQueryParams();
+  window.location.href = "{% url 'client:download_statement' %}?" + queryParams;
 }
 
 function downloadReceipt(transactionId) {
   window.location.href = `/client/transactions/receipt/${transactionId}/`;
 }
 </script>
-
 
 {% endblock %}

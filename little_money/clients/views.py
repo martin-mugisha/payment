@@ -1,19 +1,15 @@
 import datetime
 import json
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.lib.units import inch
-
 from django.http import HttpResponse
 from config.transaction_orchestrator import PaymentInitiator
 from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry, DailyPayment
 from django.utils.timezone import now, localdate
 from core.utils import is_client
 import openpyxl
+from django.utils.dateparse import parse_date
 from django.contrib import messages
 from django.db.models import Sum
 from calendar import monthrange
@@ -21,9 +17,8 @@ from decimal import Decimal, InvalidOperation
 from django.contrib.auth import update_session_auth_hash
 from .forms import ClientProfileForm, ClientPasswordChangeForm, NotificationPreferencesForm
 from finance.models import SystemEarnings
-import openpyxl
-from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
+from core.utils import generate_receipt_pdf,generate_statement_xlsx
 
 def is_all_zero(data):
     """Check if all values in the data list are zero."""
@@ -123,98 +118,100 @@ def overview_dashboard(request):
 @user_passes_test(is_client)
 def transactions(request):
     client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
-    transaction_history = RecentTransaction.objects.filter(client=client).order_by('-date')
+
+    transactions = RecentTransaction.objects.filter(client=client)
+
+    # Get filter params from GET
+    start_date_param = request.GET.get("start_date")
+    end_date_param = request.GET.get("end_date")
+    transaction_type = request.GET.get("transaction_type")
+    channel = request.GET.get("channel")
+    recipient = request.GET.get("recipient")
+    phone = request.GET.get("phone")
+
+    start_date = parse_date(start_date_param) if start_date_param else None
+    end_date = parse_date(end_date_param) if end_date_param else None
+
+    if start_date:
+        transactions = transactions.filter(date__gte=start_date)
+    if end_date:
+        transactions = transactions.filter(date__lte=end_date)
+    if transaction_type:
+        transactions = transactions.filter(transaction_type__icontains=transaction_type)
+    if channel:
+        transactions = transactions.filter(payment_method__icontains=channel)
+    if recipient:
+        transactions = transactions.filter(recipient__icontains=recipient)
+    if phone:
+        transactions = transactions.filter(phone__icontains=phone)
+
+    transactions = transactions.order_by('-date')
+
     context = {
         'client': client,
-        'transaction_history': transaction_history,
+        'transaction_history': transactions,
     }
     return render(request, 'dashboard/transactions.html', context)
+
 
 @login_required
 @user_passes_test(is_client)
 def download_statement(request):
-    client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
-    transactions = RecentTransaction.objects.filter(client=client).order_by('-date')[:20]
+    client = get_object_or_404(Client, user=request.user)
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Transaction History"
+    # Filters with safe parsing
+    start_date_param = request.GET.get("start_date")
+    end_date_param = request.GET.get("end_date")
+    transaction_type = request.GET.get("transaction_type")
+    channel = request.GET.get("channel")
+    recipient = request.GET.get("recipient")
+    phone = request.GET.get("phone")
+    all_transactions = request.GET.get("all") == "true"
 
-    headers = ['Date', 'Time', 'Recipient', 'Phone', 'Amount', 'Status', 'Method', 'Transaction ID']
-    ws.append(headers)
+    start_date = parse_date(start_date_param) if start_date_param else None
+    end_date = parse_date(end_date_param) if end_date_param else None
 
-    for txn in transactions:
-        ws.append([
-            txn.date,
-            txn.time,
-            txn.recipient,
-            txn.phone,
-            str(txn.amount),
-            txn.status,
-            txn.payment_method,
-            txn.transaction_id
-        ])
+    transactions = RecentTransaction.objects.filter(client=client)
 
-    for col in range(1, len(headers) + 1):
-        ws.column_dimensions[get_column_letter(col)].width = 20
+    if start_date:
+        transactions = transactions.filter(date__gte=start_date)
+    if end_date:
+        transactions = transactions.filter(date__lte=end_date)
+    if transaction_type:
+        transactions = transactions.filter(transaction_type__icontains=transaction_type)
+    if channel:
+        transactions = transactions.filter(payment_method__icontains=channel)
+    if recipient:
+        transactions = transactions.filter(recipient__icontains=recipient)
+    if phone:
+        transactions = transactions.filter(phone__icontains=phone)
 
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    if not all_transactions:
+        transactions = transactions.order_by('-date')[:20]
+    else:
+        transactions = transactions.order_by('-date')
+
+    xlsx_file = generate_statement_xlsx(transactions)
+
+    response = HttpResponse(
+        xlsx_file,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
     response['Content-Disposition'] = 'attachment; filename="transaction_statement.xlsx"'
-    wb.save(response)
     return response
+
+
 
 @login_required
 @user_passes_test(is_client)
 def download_receipt(request, transaction_id):
-    client, created = Client.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
-    transaction = RecentTransaction.objects.filter(client=client, transaction_id=transaction_id).first()
+    client = get_object_or_404(Client, user=request.user)
+    transaction = get_object_or_404(RecentTransaction, client=client, transaction_id=transaction_id)
 
-    if not transaction:
-        return HttpResponse("Transaction not found", status=404)
+    pdf_buffer = generate_receipt_pdf(transaction)
 
-    response = HttpResponse(content_type='application/pdf')
+    response = HttpResponse(pdf_buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="receipt_{transaction_id}.pdf"'
-
-    # Use a standard page size for better design flexibility
-    p = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
-
-    # --- Header Section ---
-    p.setFont("Helvetica-Bold", 16)
-    p.setFillColor(colors.darkblue)
-    p.drawString(inch, height - inch, "Payment Receipt")
-
-    p.setFillColor(colors.black)
-
-    # Add a line to separate the header from the details
-    p.line(inch, height - inch - 30, width - inch, height - inch - 30)
-
-    # --- Details Section ---
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(inch, height - inch - 60, "Transaction Details:")
-
-    p.setFont("Helvetica", 10)
-    y_position = height - inch - 90  # Starting Y position for details
-    line_height = 20  # Spacing between lines
-
-    p.drawString(inch, y_position, f"Transaction ID: {transaction.transaction_id or 'N/A'}")
-    p.drawString(inch, y_position - line_height, f"Date: {transaction.date}")
-    p.drawString(inch, y_position - 2 * line_height, f"Time: {transaction.time}")
-    p.drawString(inch, y_position - 3 * line_height, f"Amount: UGX. {transaction.amount}")
-    p.drawString(inch, y_position - 4 * line_height, f"Recipient: {transaction.recipient}")
-    p.drawString(inch, y_position - 5 * line_height, f"Phone: {transaction.phone or 'N/A'}")
-    p.drawString(inch, y_position - 6 * line_height, f"Status: {transaction.status}")
-    p.drawString(inch, y_position - 7 * line_height, f"Method: {transaction.payment_method or 'N/A'}")
-    p.drawString(inch, y_position - 8 * line_height, f"Description: {transaction.description or 'None'}")
-
-    # --- Footer Section ---
-    p.setFont("Helvetica-Oblique", 8)
-    p.setFillColor(colors.gray)
-    p.drawString(inch, inch, "Thank you for your business!")
-    p.drawCentredString(width / 2, 0.5 * inch, "Generated on " + str(datetime.datetime.now()))
-
-    p.showPage()
-    p.save()
     return response
 
 @login_required

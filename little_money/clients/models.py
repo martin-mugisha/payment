@@ -57,6 +57,10 @@ class RecentTransaction(models.Model):
     ])
     transaction_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
     payment_method = models.CharField(max_length=20, blank=True, null=True)
+    transaction_type = models.CharField(max_length=20, default='Cash In', choices=[
+        ('Cash In', 'Cash In'),
+        ('Cash Out', 'Cash Out'),
+        ])
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
