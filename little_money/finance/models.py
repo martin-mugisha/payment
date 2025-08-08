@@ -1,14 +1,14 @@
 from django.db import models
-
+from decimal import Decimal
 from staff.models import Staff
 
 class SystemEarnings(models.Model):
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    total_volume = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    total_volume = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     total_transactions = models.PositiveIntegerField(default=0)
     total_successful_transactions = models.PositiveIntegerField(default=0)
     total_failed_transactions = models.PositiveIntegerField(default=0)
-    total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -80,7 +80,7 @@ class Payout(models.Model):
         return f"Payout to {self.staff.name} - {self.amount} ({self.status})"
     
 class StaffCommissionAggregate(models.Model):
-    total_commission = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+    total_commission = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("0.00"))
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):

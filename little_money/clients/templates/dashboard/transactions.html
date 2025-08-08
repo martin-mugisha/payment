@@ -16,9 +16,9 @@
     <tr>
       <th>Date</th>
       <th>Time</th>
-      <th>Amount</th>
       <th>Recipient</th>
       <th>Phone Number</th>
+      <th>Amount</th>
       <th>Status</th>
       <th>Action</th>
     </tr>
@@ -28,9 +28,9 @@
     <tr>
       <td>{{ txn.date|default:"--" }}</td>
       <td>{{ txn.time|default:"--:--" }}</td>
-      <td>{{ txn.amount|default:"0.00" }}</td>
       <td>{{ txn.recipient|default:"--" }}</td>
       <td>{{ txn.phone|default:"--" }}</td>
+      <td>{{ txn.amount|default:"0.00" }}</td>
       <td>
         <span class="status-badge status-{{ txn.status|lower|default:"pending" }}">
           {{ txn.status|default:"Pending" }}

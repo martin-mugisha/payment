@@ -184,9 +184,7 @@ def download_receipt(request, transaction_id):
     p.setFillColor(colors.darkblue)
     p.drawString(inch, height - inch, "Payment Receipt")
 
-    p.setFont("Helvetica", 10)
     p.setFillColor(colors.black)
-    p.drawString(inch, height - inch - 20, "Your Company Name")
 
     # Add a line to separate the header from the details
     p.line(inch, height - inch - 30, width - inch, height - inch - 30)
@@ -213,7 +211,7 @@ def download_receipt(request, transaction_id):
     p.setFont("Helvetica-Oblique", 8)
     p.setFillColor(colors.gray)
     p.drawString(inch, inch, "Thank you for your business!")
-    p.drawCentredString(width / 2, 0.5 * inch, "Generated on " + str(datetime.now()))
+    p.drawCentredString(width / 2, 0.5 * inch, "Generated on " + str(datetime.datetime.now()))
 
     p.showPage()
     p.save()
