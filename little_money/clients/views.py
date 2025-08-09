@@ -1,5 +1,6 @@
 import datetime
 import json
+from time import timezone
 from django.http import JsonResponse
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -260,8 +261,8 @@ def payments(request):
                 if init.get('status') == 'success':
                     RecentTransaction.objects.create(
                         client =client,
-                        date = now().date(),
-                        time = now().time(),
+                        date=timezone.localtime().date(),
+                        time=timezone.localtime().time(), 
                         transaction_id = generate_transaction_id(),
                         amount= amount_decimal,
                         recipient = name,
@@ -345,8 +346,8 @@ def payments(request):
                         if init.get('status') == 'success':
                             RecentTransaction.objects.create(
                                 client =client,
-                                date = now().date(),
-                                time = now().time(),
+                                date=timezone.localtime().date(),
+                                time=timezone.localtime().time(), 
                                 amount= amount_decimal,
                                 recipient = name,
                                 transaction_id = generate_transaction_id(),
@@ -428,8 +429,8 @@ def accounts(request):
                     # Ensure amount is Decimal when creating RecentTransaction
                     RecentTransaction.objects.create(
                     client=client,
-                    date=now().date(),
-                    time=now().time(),  # Fixed: give time a value
+                    date=timezone.localtime().date(),
+                    time=timezone.localtime().time(), 
                     amount=Decimal(amount),  # Ensure Decimal for money
                     recipient=name,
                     transaction_id = generate_transaction_id(),

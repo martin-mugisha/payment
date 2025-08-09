@@ -108,7 +108,7 @@
       <td>{{ t.recent_transaction.transaction_type }}</td>
       <td>{{ t.recent_transaction.payment_method }}</td>
       <td><span class="status-badge status-{{ txn.status|lower|default:"pending" }}">
-          {{ t.status|default:"Pending" }}
+          {{ t.recent_transaction.status|default:"Pending" }}
         </span></td>
     </tr>
     {% endfor %}
