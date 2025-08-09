@@ -400,14 +400,17 @@ def accounts(request):
                     # Record the fund addition as a RecentTransaction
                     # Ensure amount is Decimal when creating RecentTransaction
                     RecentTransaction.objects.create(
-                        client=client,
-                        date=now().date(),
-                        amount=Decimal(amount), # Use Decimal for amount
-                        recipient=name,
-                        phone=phone,
-                        # Assuming RecentTransaction has a field for transaction_type
-                        # transaction_type='collection' 
-                    )
+                    client=client,
+                    date=now().date(),
+                    time=now().time(),  # Fixed: give time a value
+                    amount=Decimal(amount),  # Ensure Decimal for money
+                    recipient=name,
+                    phone=phone,
+                    payment_method=payment_method,
+                    transaction_type='Cash In',  # Or 'Cash Out'
+                    status='Pending',  #
+                    description=message,
+                )
                     messages.success(request, f'Funds of {amount} added for {name} ({phone}) via {payment_method}.')
                 else:
                     # Display the error message from the transaction handler
