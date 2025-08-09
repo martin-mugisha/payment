@@ -107,6 +107,10 @@ class Transaction(models.Model):
     @property
     def channel(self):
         return self.recent_transaction.payment_method if self.recent_transaction else None
+    
+    @property
+    def status(self):
+        return self.recent_transaction.status if self.recent_transaction else None
 
 
 class StaffCommissionHistory(models.Model):

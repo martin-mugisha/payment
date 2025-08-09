@@ -210,9 +210,10 @@ def transactions(request):
 
     # KPI counts
     total_count = transactions_list.count()
-    success_count = transactions_list.filter(status__iexact="Success").count()
-    pending_count = transactions_list.filter(status__iexact="Pending").count()
-    failed_count = transactions_list.filter(status__iexact="Failed").count()
+    success_count = transactions_list.filter(recent_transaction__status__iexact="Success").count()
+    pending_count = transactions_list.filter(recent_transaction__status__iexact="Pending").count()
+    failed_count = transactions_list.filter(recent_transaction__status__iexact="Failed").count()
+
 
     context = {
         'transactions': transactions_list,
