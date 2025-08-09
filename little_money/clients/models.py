@@ -55,7 +55,7 @@ class RecentTransaction(models.Model):
         ('Failed', 'Failed'),
         ('Processing', 'Processing'), 
     ])
-    transaction_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    transaction_id = models.PositiveIntegerField(unique=True, blank=True, null=True)
     payment_method = models.CharField(max_length=20, blank=True, null=True)
     transaction_type = models.CharField(max_length=20, default='Cash In', choices=[
         ('Cash In', 'Cash In'),
@@ -67,6 +67,13 @@ class RecentTransaction(models.Model):
 
     def __str__(self):
         return f"{self.client.name} - {self.recipient} - {self.amount} - {self.status}"
+    
+    def save(self, *args, **kwargs):
+        if not self.transaction_id:
+            last = RecentTransaction.objects.all().order_by('-transaction_id').first()
+            self.transaction_id = 1 if not last else last.transaction_id + 1
+        super().save(*args, **kwargs)
+
  
     class Meta:
         ordering = ['-date', '-created_at']

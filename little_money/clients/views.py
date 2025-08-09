@@ -262,8 +262,7 @@ def payments(request):
                     RecentTransaction.objects.create(
                         client =client,
                         date=timezone.localtime().date(),
-                        time=timezone.localtime().time(), 
-                        transaction_id = generate_transaction_id(),
+                        time=timezone.localtime().time(),
                         amount= amount_decimal,
                         recipient = name,
                         phone = phone,
@@ -350,7 +349,6 @@ def payments(request):
                                 time=timezone.localtime().time(), 
                                 amount= amount_decimal,
                                 recipient = name,
-                                transaction_id = generate_transaction_id(),
                                 phone = phone,
                                 payment_method = payment_method,
                                 transaction_type = 'Cash Out',
@@ -433,7 +431,6 @@ def accounts(request):
                     time=timezone.localtime().time(), 
                     amount=Decimal(amount),  # Ensure Decimal for money
                     recipient=name,
-                    transaction_id = generate_transaction_id(),
                     phone=phone,
                     payment_method=payment_method,
                     transaction_type='Cash In',  # Or 'Cash Out'
