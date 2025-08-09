@@ -26,8 +26,9 @@
             <td>{{ notification.pay_time }}</td>
             <td>{{ notification.processed }}</td>
             <td>{{ notification.received_at }}</td>
-            <td><a href="{% url 'order_detail' notification.out_trade_no %}">View Order</a></td>
-            <!-- Replace 'order_detail' and URL param as per your order app -->
+            <td>hey</td>
+            <!-- <td><a href="{% url 'order_detail' notification.out_trade_no %}">View Order</a></td>
+            Replace 'order_detail' and URL param as per your order app -->
         </tr>
     {% empty %}
         <tr><td colspan="8">No notifications found.</td></tr>
