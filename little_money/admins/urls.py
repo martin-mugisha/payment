@@ -40,5 +40,5 @@ urlpatterns = [
     path('delete-staff-user/<int:user_id>/', staff_user_delete, name='delete_staff_user'),
     path('force-password-change/', force_password_change_view, name='force_password_change'),
     path('webhook-result', webhook, name='webhook_result'),
-    path('orders/<int:order_id>/', order_detail, name='order_detail'),
+    path('orders/<int:pk>/', order_detail, name='order_detail'),
 ]
