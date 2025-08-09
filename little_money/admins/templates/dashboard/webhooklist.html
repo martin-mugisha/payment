@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
             modalContent.innerHTML = "<p>Loading...</p>";
             orderModal.show();
 
-            fetch(`/admins/order_detail_json/${id}/`)
+            fetch(`/admins/orders/${id}/`)
                 .then(response => response.json())
                 .then(data => {
                     modalContent.innerHTML = `
