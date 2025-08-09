@@ -1,5 +1,7 @@
 from django.utils.translation import gettext as _
 import io
+import string
+from django.db import transaction
 import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -9,6 +11,8 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from io import BytesIO
+
+from core.models import TransactionIDCounter
 
 def is_admin(user):
     return hasattr(user, 'role') and user.role == 'admin'
@@ -190,3 +194,36 @@ def generate_statement_xlsx(transactions, lang='en'):
     wb.save(output)
     output.seek(0)
     return output
+from datetime import datetime
+def generate_transaction_id():
+    letters = string.ascii_uppercase
+    year = datetime.now().year
+
+    with transaction.atomic():
+        # Lock the counter row to prevent race conditions
+        counter, created = TransactionIDCounter.objects.select_for_update().get_or_create(id=1)
+
+        first_letter = letters[counter.first_letter_index]
+        second_letter = letters[counter.second_letter_index]
+        number_str = f"{counter.number:06d}"
+
+        txn_id = f"MP{year}-{first_letter}{second_letter}-{number_str}"
+
+        # Increment the counter
+        counter.number += 1
+        if counter.number > 999999:
+            counter.number = 0
+            counter.second_letter_index += 1
+
+            if counter.second_letter_index >= len(letters):
+                counter.second_letter_index = 0
+                counter.first_letter_index += 1
+
+                if counter.first_letter_index >= len(letters):
+                    # Optional: Reset or raise error if all combinations exhausted
+                    counter.first_letter_index = 0
+
+        counter.save()
+
+    return txn_id
+

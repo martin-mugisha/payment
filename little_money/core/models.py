@@ -13,3 +13,13 @@ class CustomUser(AbstractUser):
     email = models.EmailField(null=True, blank=True)
     is_first_login = models.BooleanField(default=True)
     profile_image = models.ImageField(upload_to='avatars/', blank=True, null=True)
+
+class TransactionIDCounter(models.Model):
+    first_letter_index = models.PositiveSmallIntegerField(default=0)
+    second_letter_index = models.PositiveSmallIntegerField(default=0)
+    number = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        # Make sure there is only one row
+        verbose_name = "Transaction ID Counter"
+        verbose_name_plural = "Transaction ID Counters"

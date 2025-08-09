@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponse
 from config.transaction_orchestrator import PaymentInitiator
+from config.utils import generate_transaction_id
 from .models import Client, Finances, RecentTransaction, UpcomingPayment, LinkedAccount, UserSetting, FAQ, ContactInfo, KnowledgeBaseEntry, DailyPayment
 from django.utils.timezone import now, localdate
 from core.utils import is_client
@@ -261,6 +262,7 @@ def payments(request):
                         client =client,
                         date = now().date(),
                         time = now().time(),
+                        transaction_id = generate_transaction_id(),
                         amount= amount_decimal,
                         recipient = name,
                         phone = phone,
@@ -347,6 +349,7 @@ def payments(request):
                                 time = now().time(),
                                 amount= amount_decimal,
                                 recipient = name,
+                                transaction_id = generate_transaction_id(),
                                 phone = phone,
                                 payment_method = payment_method,
                                 transaction_type = 'Cash Out',
@@ -429,6 +432,7 @@ def accounts(request):
                     time=now().time(),  # Fixed: give time a value
                     amount=Decimal(amount),  # Ensure Decimal for money
                     recipient=name,
+                    transaction_id = generate_transaction_id(),
                     phone=phone,
                     payment_method=payment_method,
                     transaction_type='Cash In',  # Or 'Cash Out'
