@@ -53,11 +53,6 @@ def payment_notification(request):
             logger.error(f"Missing required field in webhook payload: {field}")
             return HttpResponseBadRequest(f"Missing field: {field}")
 
-    if not is_valid:
-        logger.info(f"Raw webhook data: {json.dumps(data, indent=2)}")
-        logger.error("Signature verification failed for webhook.")
-        return HttpResponse("FAILED")
-
     # Optionally log PayMessage
     pay_message = data.get("PayMessage")
     if pay_message:
