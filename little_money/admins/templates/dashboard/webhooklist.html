@@ -26,7 +26,12 @@
             <td>{{ notification.pay_time }}</td>
             <td>{{ notification.processed }}</td>
             <td>{{ notification.received_at }}</td>
-            <td>hey</td>
+            <td>
+                <button class="btn btn-primary btn-sm view-order-btn"
+                        data-id="{{ notification.id }}">
+                    View Order
+                </button>
+            </td>
         </tr>
     {% empty %}
         <tr><td colspan="8">No notifications found.</td></tr>
@@ -43,5 +48,60 @@
         <a href="?page={{ notifications.next_page_number }}">Next</a>
     {% endif %}
 </div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderModalLabel">Order Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="modalContent">
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Script to handle modal -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
+    const modalContent = document.getElementById('modalContent');
+
+    document.querySelectorAll('.view-order-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            modalContent.innerHTML = "<p>Loading...</p>";
+            orderModal.show();
+
+            fetch(`/admins/order_detail_json/${id}/`)
+                .then(response => response.json())
+                .then(data => {
+                    modalContent.innerHTML = `
+                        <p><strong>Order Number:</strong> ${data.out_trade_no}</p>
+                        <p><strong>Status:</strong> ${data.pay_status_display}</p>
+                        <p><strong>Transaction ID:</strong> ${data.transaction_id}</p>
+                        <p><strong>Amount:</strong> ${data.amount}</p>
+                        <p><strong>Actual Payment Amount:</strong> ${data.actual_payment_amount}</p>
+                        <p><strong>Actual Collect Amount:</strong> ${data.actual_collect_amount}</p>
+                        <p><strong>Payer Charge:</strong> ${data.payer_charge}</p>
+                        <p><strong>Payee Charge:</strong> ${data.payee_charge}</p>
+                        <p><strong>Payment Time:</strong> ${data.pay_time}</p>
+                        <p><strong>Processed:</strong> ${data.processed}</p>
+                        <p><strong>Processed At:</strong> ${data.processed_at ?? 'N/A'}</p>
+                        <p><strong>Pay Message:</strong> ${data.pay_message ?? 'N/A'}</p>
+                        <p><strong>Error Message:</strong> ${data.error_message ?? 'N/A'}</p>
+                        <p><strong>Received At:</strong> ${data.received_at}</p>
+                    `;
+                });
+        });
+    });
+});
+</script>
 
 {% endblock %}

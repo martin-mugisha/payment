@@ -16,7 +16,7 @@ from .views import (
     activity_logs,
     finance_dashboard,
     force_password_change_view,
-    #order_detail,
+    order_detail,
     webhook,
 )
 
@@ -40,5 +40,5 @@ urlpatterns = [
     path('delete-staff-user/<int:user_id>/', staff_user_delete, name='delete_staff_user'),
     path('force-password-change/', force_password_change_view, name='force_password_change'),
     path('webhook-result', webhook, name='webhook_result'),
-    #path('orders/<str:order_id>/', order_detail, name='order_detail'),
+    path('orders/<int:order_id>/', order_detail, name='order_detail'),
 ]

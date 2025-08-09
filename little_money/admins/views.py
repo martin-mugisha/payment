@@ -144,7 +144,7 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from .forms import AdminProfileForm, AdminPasswordChangeForm
 
-#@login_required
+@login_required
 @user_passes_test(is_admin)
 def profile_view(request):
     user = request.user
@@ -372,11 +372,30 @@ def webhook(request):
     paginator = Paginator(notifications, 20)  # Show 20 per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-
-    # Example: If you have orders linked by OutTradeNo, you can do joins here
-    # Or just pass notifications to template for admins to review
     
     context = {
         'notifications': page_obj,
     }
     return render(request, 'dashboard/webhooklist.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def order_detail(request, pk):
+    notification = get_object_or_404(PaymentNotification, pk=pk)
+    return JsonResponse({
+        "out_trade_no": notification.out_trade_no,
+        "pay_status": notification.pay_status,
+        "pay_status_display": notification.get_pay_status_display(),
+        "transaction_id": notification.transaction_id,
+        "amount": str(notification.amount),
+        "actual_payment_amount": str(notification.actual_payment_amount),
+        "actual_collect_amount": str(notification.actual_collect_amount),
+        "payer_charge": str(notification.payer_charge),
+        "payee_charge": str(notification.payee_charge),
+        "pay_time": notification.pay_time.strftime('%Y-%m-%d %H:%M:%S') if notification.pay_time else None,
+        "processed": notification.processed,
+        "processed_at": notification.processed_at.strftime('%Y-%m-%d %H:%M:%S') if notification.processed_at else None,
+        "pay_message": notification.pay_message,
+        "error_message": notification.error_message,
+        "received_at": notification.received_at.strftime('%Y-%m-%d %H:%M:%S'),
+    })
