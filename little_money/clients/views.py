@@ -257,6 +257,18 @@ def payments(request):
                 result_data = response.initiate_transaction()
                 init = json.loads(result_data.content)
                 if init.get('status') == 'success':
+                    RecentTransaction.objects.create(
+                        client =client,
+                        date = now().date(),
+                        time = now().time(),
+                        amount= amount_decimal,
+                        recipient = name,
+                        phone = phone,
+                        payment_method = payment_method,
+                        transaction_type = 'Cash Out',
+                        status = 'Pending',
+                        description = message,
+                    )
                     messages.success(request, f'Disbursement for {name} ({phone}) initiated successful.')
                     return redirect('client:payments')
             except Exception as e:
@@ -329,6 +341,18 @@ def payments(request):
                         result_data = result.initiate_transaction()
                         init = json.loads(result_data.content)
                         if init.get('status') == 'success':
+                            RecentTransaction.objects.create(
+                                client =client,
+                                date = now().date(),
+                                time = now().time(),
+                                amount= amount_decimal,
+                                recipient = name,
+                                phone = phone,
+                                payment_method = payment_method,
+                                transaction_type = 'Cash Out',
+                                status = 'Pending',
+                                description = message,
+                            )
                             payments_processed+=1
                             messages.success(request, f'Disbursement for {name} ({phone}) successful.')
                             return redirect('client:payments')
@@ -410,7 +434,7 @@ def accounts(request):
                     transaction_type='Cash In',  # Or 'Cash Out'
                     status='Pending',  #
                     description=message,
-                )
+                    )
                     messages.success(request, f'Funds of {amount} added for {name} ({phone}) via {payment_method}.')
                 else:
                     # Display the error message from the transaction handler
