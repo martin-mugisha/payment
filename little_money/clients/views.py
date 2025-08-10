@@ -1,6 +1,6 @@
 import datetime
 import json
-from time import timezone
+from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -268,7 +268,7 @@ def payments(request):
                         phone = phone,
                         payment_method = payment_method,
                         transaction_type = 'Cash Out',
-                        status = 'Pending',
+                        status = 'Processing',
                         description = message,
                     )
                     messages.success(request, f'Disbursement for {name} ({phone}) initiated successful.')

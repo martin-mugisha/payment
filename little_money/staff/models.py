@@ -67,7 +67,7 @@ class Transaction(models.Model):
     )
     staff = models.ForeignKey('Staff', on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, default="processing")
     reason = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     created_at = models.DateTimeField(auto_now=True) 
@@ -109,7 +109,7 @@ class Transaction(models.Model):
         return self.recent_transaction.payment_method if self.recent_transaction else None
     
     @property
-    def status(self):
+    def recent_status(self):
         return self.recent_transaction.status if self.recent_transaction else None
 
 
