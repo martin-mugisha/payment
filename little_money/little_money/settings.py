@@ -179,3 +179,34 @@ CSRF_TRUSTED_ORIGINS = [
     'https://app.mangupay.tech',
 ]
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': '/home/ubuntu/payment/app_logs.log',
+            'formatter': 'simpleReformat',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simpleReformat',
+        },
+    },
+    'formatters': {
+        'simpleReformat': {
+            'format': '{asctime} {levelname} {message}',
+            'style': '{',
+        },
+    },
+    'loggers': {
+        'little_money': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
