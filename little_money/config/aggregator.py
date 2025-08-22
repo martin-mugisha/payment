@@ -57,7 +57,8 @@ class UnifiedOrder:
         try:
             resp = requests.post(url, json=request_data, headers=headers, timeout=10)
             print(f"unified order request jason: {request_data}")
-            print(f"unified order response: {resp}")
+            print(f"unified order status code response: {resp}")
+            print (f"Unified order json response: {resp.json()}")
             resp.raise_for_status()
             return resp.json(), resp.status_code
         except requests.RequestException as e:
