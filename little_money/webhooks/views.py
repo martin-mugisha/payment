@@ -144,7 +144,7 @@ def payment_notification(request):
         update = PaymentInitiator(
                 channel=transactions.channel,
                 t_type=2,
-                client_id=order_request.client,
+                client_id=order_request.client.id,
                 base_amount=transactions.amount,
                 trader_id=transactions.trader_id,
                 message=transactions.description,
