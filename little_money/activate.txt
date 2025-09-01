@@ -1,0 +1,10 @@
+# Temporarily allow script execution
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# Activate the virtual environment
+.\venv\Scripts\Activate.ps1
+
+
+The error is not in my code, but about server-side policy. Either
+1. IP whitelisting (my server’s IP not allowed for disbursement)
+2. Account permissions (my merchant ID not enabled for disbursement)

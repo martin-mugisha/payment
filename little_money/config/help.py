@@ -60,6 +60,7 @@ def process_transaction(channel: int, t_type: int, client_id: int, base_amount: 
             name=data.get("FullName"),
             message=message
         )
+        print(f"order_response: {unifiedorder_response}")
 
         unified_order_resp_obj = UnifiedOrderResponse(
             status_code=unifiedorder_response.get("StatusCode", 0),

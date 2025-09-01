@@ -1,5 +1,0 @@
-# Temporarily allow script execution
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-
-# Activate the virtual environment
-.\venv\Scripts\Activate.ps1

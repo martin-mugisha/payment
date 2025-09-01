@@ -56,12 +56,14 @@ class UnifiedOrder:
         order.save()
         try:
             resp = requests.post(url, json=request_data, headers=headers, timeout=10)
-            print(f"unified order request jason: {request_data}")
-            print(f"unified order status code response: {resp}")
-            print (f"Unified order json response: {resp.json()}")
+            print("Request URL:", url)
+            print("Request Data:", request_data)
+            print("Response Status:", resp.status_code)
+            print("Response Headers:", resp.headers)
+            print("Response Body:", resp.text)
             resp.raise_for_status()
-            return resp.json(), resp.status_code
         except requests.RequestException as e:
+            print("Request Exception:", str(e))
             return {"error": f"Failed to connect to aggregator: {str(e)}"}, 503
         except json.JSONDecodeError:
             return {"error": "Invalid response from aggregator"}, 502
